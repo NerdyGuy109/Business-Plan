@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu & Inventory</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">🧃</span> Menu &amp; Inventory</div>
+    <nav id="tabs">
+      <button data-tab="dashboard" class="active">Dashboard</button>
+      <button data-tab="menu">Menu</button>
+      <button data-tab="ingredients">Ingredients</button>
+      <button data-tab="sell">Record Sales</button>
+      <button data-tab="procurement">Procurement</button>
+      <button data-tab="excel">Excel</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="tab-dashboard" class="tab active">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid2">
+        <div class="card">
+          <h2>Needs reordering</h2>
+          <div id="dash-reorder"></div>
+        </div>
+        <div class="card">
+          <h2>Menu availability</h2>
+          <p class="hint">How many of each item current stock can make. The limiting ingredient is shown.</p>
+          <div id="dash-availability"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Menu -->
+    <section id="tab-menu" class="tab">
+      <div class="toolbar">
+        <input id="menu-search" type="search" placeholder="Search menu…">
+        <select id="menu-category"><option value="">All categories</option></select>
+        <span class="spacer"></span>
+        <button class="primary" id="new-item">+ New menu item</button>
+      </div>
+      <div id="menu-grid" class="menu-grid"></div>
+    </section>
+
+    <!-- Ingredients -->
+    <section id="tab-ingredients" class="tab">
+      <div class="toolbar">
+        <input id="ing-search" type="search" placeholder="Search ingredients, suppliers…">
+        <select id="ing-category"><option value="">All categories</option></select>
+        <label class="check"><input type="checkbox" id="ing-low"> Only needs reorder</label>
+        <span class="spacer"></span>
+        <button class="primary" id="new-ing">+ New ingredient</button>
+      </div>
+      <div class="card flush">
+        <div class="table-wrap"><table id="ing-table" class="data"></table></div>
+      </div>
+    </section>
+
+    <!-- Sell -->
+    <section id="tab-sell" class="tab">
+      <div class="grid-sell">
+        <div>
+          <p class="hint">Tap items to add them to the ticket. Recording the sale deducts every ingredient in each recipe from stock.</p>
+          <div id="sell-buttons" class="sell-buttons"></div>
+        </div>
+        <div class="card ticket">
+          <h2>Ticket</h2>
+          <div id="ticket-lines"></div>
+          <div id="ticket-usage"></div>
+          <button class="primary wide" id="ticket-submit">Record sale</button>
+          <button class="ghost wide" id="ticket-clear">Clear</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Recent sales</h2>
+        <div id="sales-log"></div>
+      </div>
+    </section>
+
+    <!-- Procurement -->
+    <section id="tab-procurement" class="tab">
+      <p class="hint">Suggested orders refill each ingredient to its par level once it reaches its reorder point. Adjust quantities, then create a purchase order per supplier. Mark it received when it arrives to add the stock.</p>
+      <div id="proc-suppliers"></div>
+      <div class="card">
+        <h2>Purchase orders</h2>
+        <div id="po-list"></div>
+      </div>
+    </section>
+
+    <!-- Excel -->
+    <section id="tab-excel" class="tab">
+      <div class="grid2">
+        <div class="card">
+          <h2>Download workbook</h2>
+          <p>The workbook is regenerated automatically after every change and saved to
+            <code>exports/inventory.xlsx</code>. It contains: Ingredients, Menu Items, Recipes (which parts go into which item),
+            a Where&nbsp;Used matrix, Procurement, Purchase Orders and the Sales Log. Costs, margins and reorder flags are live formulas.</p>
+          <a class="button primary" href="/api/export.xlsx">Download inventory.xlsx</a>
+        </div>
+        <div class="card">
+          <h2>Import changes from Excel</h2>
+          <p>Edited ingredients, menu items or recipes in Excel? Import the workbook to update the website.
+            Only the blue input columns of <b>Ingredients</b>, <b>Menu Items</b> and <b>Recipes</b> are read; sales and
+            purchase orders are kept.</p>
+          <input type="file" id="import-file" accept=".xlsx">
+          <div class="row-gap">
+            <button class="primary" id="import-upload">Import uploaded file</button>
+            <button class="ghost" id="import-local" title="Reads exports/inventory.xlsx on the server">Re-read exports/inventory.xlsx</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Menu item builder -->
+  <dialog id="item-dialog" class="big">
+    <form method="dialog" id="item-form">
+      <div class="dialog-head">
+        <h2 id="item-title">New menu item</h2>
+        <button type="button" class="ghost" data-close>✕</button>
+      </div>
+      <div class="builder">
+        <div class="builder-left">
+          <div class="image-drop" id="image-drop">
+            <img id="item-image-preview" alt="">
+            <span id="item-image-placeholder">Click or drop a picture</span>
+            <input type="file" id="item-image-file" accept="image/*" hidden>
+          </div>
+          <label>Name <input name="name" required></label>
+          <div class="two">
+            <label>Category <input name="category" list="item-categories"></label>
+            <label>Size <input name="size" placeholder="16 oz"></label>
+          </div>
+          <div class="two">
+            <label>Price ($) <input name="price" type="number" step="0.01" min="0"></label>
+            <label>Emoji (if no picture) <input name="emoji" maxlength="4"></label>
+          </div>
+          <label>Description <textarea name="description" rows="3"></textarea></label>
+          <label class="check"><input type="checkbox" name="active"> On the menu (active)</label>
+          <div class="cost-box" id="cost-box"></div>
+        </div>
+        <div class="builder-right">
+          <h3>Recipe <span class="hint">— what goes into one serving</span></h3>
+          <div id="recipe-lines" class="recipe-lines"></div>
+          <h3>Add ingredients <span class="hint">— click to add, click again to add more</span></h3>
+          <div class="toolbar tight">
+            <input id="picker-search" type="search" placeholder="Search ingredients…">
+            <button type="button" class="ghost" id="picker-new">+ New ingredient</button>
+          </div>
+          <div id="picker-cats" class="chips"></div>
+          <div id="picker" class="picker"></div>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button type="button" class="danger ghost" id="item-delete">Delete</button>
+        <button type="button" class="ghost" id="item-duplicate">Duplicate as new</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" data-close>Cancel</button>
+        <button type="submit" class="primary">Save item</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Ingredient editor -->
+  <dialog id="ing-dialog">
+    <form method="dialog" id="ing-form">
+      <div class="dialog-head">
+        <h2 id="ing-title">New ingredient</h2>
+        <button type="button" class="ghost" data-close>✕</button>
+      </div>
+      <fieldset>
+        <legend>Basics</legend>
+        <div class="three">
+          <label>Name <input name="name" required></label>
+          <label>Category <input name="category" list="ing-categories"></label>
+          <label>Recipe unit <select name="unit" id="unit-select"></select></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Purchasing</legend>
+        <div class="three">
+          <label>Supplier <input name="supplier" list="suppliers"></label>
+          <label>Supplier SKU <input name="supplier_sku"></label>
+          <label>Package description <input name="package_desc" placeholder="1 gal jug"></label>
+          <label>Quantity in package <span class="unit-tag"></span><input name="package_qty" type="number" step="any" min="0"></label>
+          <label>Package cost ($) <input name="package_cost" type="number" step="0.01" min="0"></label>
+          <label>Shipping per package ($) <input name="shipping_cost" type="number" step="0.01" min="0"></label>
+          <label>Lead time (days) <input name="lead_time_days" type="number" step="1" min="0"></label>
+          <label>Shelf life (days) <input name="shelf_life_days" type="number" step="1" min="0"></label>
+          <label>Minimum order (packages) <input name="min_order_packages" type="number" step="1" min="1"></label>
+        </div>
+        <div class="calc" id="ing-unit-cost"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Stock</legend>
+        <div class="three">
+          <label>On hand <span class="unit-tag"></span><input name="on_hand" type="number" step="any"></label>
+          <label>Reorder point <span class="unit-tag"></span><input name="reorder_point" type="number" step="any" min="0"></label>
+          <label>Par level <span class="unit-tag"></span><input name="par_level" type="number" step="any" min="0"></label>
+        </div>
+        <div class="calc" id="ing-reorder-hint"></div>
+      </fieldset>
+      <label>Notes <textarea name="notes" rows="2"></textarea></label>
+      <div id="ing-used-in" class="hint"></div>
+      <div class="dialog-foot">
+        <button type="button" class="danger ghost" id="ing-delete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" data-close>Cancel</button>
+        <button type="submit" class="primary">Save ingredient</button>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="item-categories"></datalist>
+  <datalist id="ing-categories"></datalist>
+  <datalist id="suppliers"></datalist>
+  <div id="toast"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
