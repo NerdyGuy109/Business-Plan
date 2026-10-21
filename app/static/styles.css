@@ -73,6 +73,7 @@ table.data td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertica
 table.data .r { text-align: right; white-space: nowrap; }
 table.data.compact td { padding: 6px 8px; }
 #ing-table tbody tr { cursor: pointer; }
+#ing-table td:first-child, #ing-table td:last-child { white-space: nowrap; }
 #ing-table tbody tr:hover { background: var(--brand-soft); }
 tr.row-bad td:first-child { box-shadow: inset 3px 0 var(--bad); }
 .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--line); white-space: nowrap; }
@@ -108,8 +109,9 @@ dialog form { padding: 18px 22px; }
 .dialog-foot { display: flex; gap: 8px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 fieldset { border: 1px solid var(--line); border-radius: 10px; margin: 0 0 12px; padding: 10px 14px 4px; }
 legend { font-weight: 700; padding: 0 6px; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 12px; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 12px; }
+.two > label, .three > label { min-width: 0; }
 .calc { background: var(--brand-soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 13px; }
 
 .builder { display: grid; grid-template-columns: 340px 1fr; gap: 22px; }
@@ -155,7 +157,7 @@ details { margin-top: 8px; font-size: 13px; }
 
 @media (max-width: 860px) {
   .builder, .grid-sell { grid-template-columns: 1fr; }
-  .three { grid-template-columns: 1fr 1fr; }
+  .three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid2 { grid-template-columns: 1fr; }
   main { padding: 12px; }
   input[type=search] { min-width: 0; flex: 1; }
