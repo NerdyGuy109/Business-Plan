@@ -13,6 +13,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
 h2 { font-size: 17px; margin: 0 0 10px; }
 h3 { font-size: 15px; margin: 14px 0 8px; }
@@ -162,6 +163,8 @@ body.role-staff .mgr-only, body:not(.role-owner) .owner-only { display: none !im
 
 .user-form { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
 .user-form button { margin-bottom: 10px; }
+
+#pw-form { max-width: 460px; }
 
 /* counts & waste */
 .grid-stock { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
