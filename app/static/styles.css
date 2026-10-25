@@ -35,7 +35,7 @@ main { padding: 20px; max-width: 1400px; margin: 0 auto; }
 
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 16px; overflow-x: auto; }
 .card.flush { padding: 0; overflow: hidden; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(max(420px, calc(50% - 8px)), 1fr)); gap: 16px; }
 .grid2 > .span-all { grid-column: 1 / -1; }
 .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .toolbar h2 { margin: 0; }

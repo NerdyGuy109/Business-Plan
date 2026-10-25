@@ -143,10 +143,25 @@ tests/             automated tests
 
 The server listens on `127.0.0.1` (this computer only) unless started with `--host 0.0.0.0`.
 
+## Training materials
+
+In `docs/manuals/`, ready to print (Letter):
+
+| File | For |
+|---|---|
+| `Staff-Guide.pdf` | Everyone: signing in, first and forgotten passwords, sales, allergens, receiving, counting, waste, schedule, signing out. Ends with a one-page quick reference to post by the counter. |
+| `Manager-Guide.pdf` | Managers: helping staff with accounts, questions staff ask, the daily and weekly routines, menu and ingredients, Excel, training new staff. Ends with a checklist. |
+| `Staff-Knowledge-Check.pdf` | 12 multiple-choice questions, pass mark 10. Answer key on the last page. |
+| `Manager-Knowledge-Check.pdf` | 15 questions, pass mark 13. Answer key on the last page. |
+
+The guides are HTML (`staff-guide.html`, `manager-guide.html`, shared `manual.css`); the quizzes are generated from
+`make_quiz.py` so the questions and the answer key always match. Edit them, then print to PDF from Chrome
+(Letter, default margins, background graphics on).
+
 ## Sales materials
 
-`docs/brochure/Menu-Inventory-Brochure.pdf` is a two-page leave-behind (front: the pitch; back: every
-feature with a screenshot). Fill in the contact placeholders in `docs/brochure/brochure.html` and re-render it by
+`docs/brochure/Menu-Inventory-Brochure.pdf` is a two-page leave-behind (front: the pitch; back: the ten
+main features, each with a screenshot). Fill in the contact placeholders in `docs/brochure/brochure.html` and re-render it by
 opening that file in Chrome and choosing Print → Save as PDF (Letter, margins none, background graphics on).
 
 ## Tests

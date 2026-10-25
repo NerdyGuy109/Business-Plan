@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Manager Guide · Menu &amp; Inventory</title>
+<link rel="stylesheet" href="manual.css">
+<style>:root { --doc-title: "Menu & Inventory · Manager guide"; }</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="brand"><span class="mark">M</span> Menu &amp; Inventory</div>
+  <h1>Manager guide</h1>
+  <p>How to look after your team's accounts, fix common mistakes, and run the daily and weekly routines: sales imports,
+    reordering, deliveries, counts, waste, costs and the schedule. Read the <b>Staff guide</b> first; everything in it applies to you too.</p>
+</div>
+
+<section>
+  <h2><span class="num">1</span>What you can do</h2>
+  <table>
+    <tr><th style="width:16%">Role</th><th>Can</th></tr>
+    <tr><td><b>Staff</b></td><td>Record sales, receive deliveries, count stock, log waste, view the menu (with allergens) and the schedule, change their own password.</td></tr>
+    <tr><td><b>Manager</b> (you)</td><td>Everything staff can, plus: the Dashboard, menu and recipes, ingredients and suppliers, ordering, the schedule and employees,
+      sales imports, Excel, removing wrong waste entries, and <b>staff accounts</b> (add, reset passwords, disable).</td></tr>
+    <tr><td><b>Owner</b></td><td>Everything, plus manager and owner accounts, roles, business settings (name, target food cost) and backups.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">2</span>Helping your team with accounts</h2>
+  <p>All account work happens on <b>Settings → Users</b>. You see your staff (and yourself); managers and owners are handled by the owner.</p>
+  <figure><img src="img/mgr-users.jpg" alt="Users card, manager view"><figcaption>Riley still has the <b>temporary password</b> you set; the tag disappears once they choose their own.</figcaption></figure>
+
+  <div class="row">
+    <div>
+      <h3>Add a new team member</h3>
+      <ol class="steps">
+        <li>Under <b>Add a user</b>, type their name and a username (e.g. <b>riley</b>: letters, numbers, dots or dashes).</li>
+        <li>Type a <b>temporary password</b> (8+ characters).</li>
+        <li>Pick their <b>Employee</b> record so deliveries, counts and waste they log carry their name. (Add them on the Schedule tab first if they aren't there; see section 7.)</li>
+        <li>Tap <span class="ui">Add user</span>. Tell them their username and temporary password <b>in person</b>, and give them the Staff guide.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Someone forgot their password</h3>
+      <ol class="steps">
+        <li>Find them in the Users table and tap <span class="ui">Reset password</span>.</li>
+        <li>Type a new temporary password (8+ characters) and confirm.</li>
+        <li>Tell them the temporary password. They are signed out everywhere, and at their next sign-in the app makes them choose their own.</li>
+      </ol>
+      <div class="note"><b>"Too many attempts"?</b> After 5 wrong passwords that username is locked for 5 minutes from that device. A reset doesn't lift the wait.</div>
+      <h3>Someone leaves</h3>
+      <ol class="steps">
+        <li>Tap <span class="ui">Disable</span> on their row. They are signed out at once and can't sign in. (<span class="ui">Enable</span> brings them back.)</li>
+        <li>On the <b>Schedule</b>, click their name and tap <span class="ui">Remove from roster</span>. Their upcoming shifts become open shifts; past shifts stay for labor history.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="warn"><b>Good habits</b>
+    One account per person, never shared. Never ask for someone's password; reset it instead. Disable accounts on someone's last day.
+    You can't reset your own password here: use <b>My account</b>, or ask the owner if you've forgotten it.</div>
+</section>
+
+<section>
+  <h2><span class="num">3</span>Questions staff will ask you</h2>
+  <table>
+    <tr><th style="width:36%">They say</th><th>What to do</th></tr>
+    <tr><td>"I forgot my password" / "It says too many attempts"</td><td>Reset their password (section 2). If locked, they wait 5 minutes, then sign in with the temporary one.</td></tr>
+    <tr><td>"It says this needs a manager account"</td><td>That action is manager-only (e.g. editing the menu or creating orders). Do it for them, or explain the right way.</td></tr>
+    <tr><td>"Should I ring sales up here?"</td><td>Only if your shop doesn't import sales from the till. If you import (section 4), tell staff <b>not</b> to also record sales, or every drink is counted twice.</td></tr>
+    <tr><td>"I logged the wrong waste"</td><td><b>Counts &amp; Waste → Waste log</b>, tap <span class="ui">Remove</span> on that entry. The stock goes back. Then they log it correctly.</td></tr>
+    <tr><td>"I entered a sale or a delivery wrong"</td><td>Sales recorded by hand and delivery receipts can't be undone. Fix the stock: do a <b>stock count</b> of the affected items (section 6). Add a note.</td></tr>
+    <tr><td>"The delivery has items we didn't order"</td><td>Have them tick <b>Wrong or extra items</b> and describe it in the notes; call the supplier.</td></tr>
+    <tr><td>"Is this drink nut-free?"</td><td>Check the <b>Contains</b> line on the Menu. The app doesn't track shared blenders or cross-contact, so never promise "allergen-free".</td></tr>
+    <tr><td>"Can I swap shifts?"</td><td>Only managers change the schedule. Drag the shift to the new person (section 7).</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">4</span>Every day</h2>
+  <h3>a. Open with the Dashboard</h3>
+  <figure><img src="img/mgr-dashboard.jpg" alt="Dashboard"><figcaption>Top row: what needs reordering, anything out of stock, stock value, average food cost against target, waste this week, deliveries due and labor this week.</figcaption></figure>
+  <ul>
+    <li><b>Need reorder</b> and the <b>Needs reordering</b> table: a red <b>&lt; lead time</b> tag means stock runs out before a new delivery could arrive. Order today.</li>
+    <li><b>Deliveries due</b>: make sure someone checks them in on Receiving; chase anything overdue.</li>
+    <li><b>Menu availability</b>: how many of each drink stock can make, and which ingredient limits it.</li>
+  </ul>
+
+  <h3>b. Import yesterday's sales from the till</h3>
+  <ol class="steps">
+    <li>In your till system, export the <b>item sales</b> report for yesterday as a CSV file (one row per item sold, with date and quantity).</li>
+    <li>Open <b>Record Sales</b> → <b>Import sales from your till system</b> and choose the file.</li>
+    <li>Check the column choices (Date, Item name and Quantity are required). They are usually right.</li>
+    <li>For each name with a red bar, pick the matching menu item, or <b>Ignore</b> for things that aren't drinks (gift cards, merch). The app remembers your choices.</li>
+    <li>Tap <span class="ui">Import … drinks</span>. If a file was imported before, you'll be warned before counting it twice.</li>
+  </ol>
+  <figure><img src="img/mgr-import.jpg" alt="Sales import preview"><figcaption>Two names still need a match. Refunds are skipped automatically.</figcaption></figure>
+  <div class="tip"><b>Imported the wrong file?</b> Under <b>Import history</b>, tap <span class="ui">Undo</span>: its sales are removed and the ingredients go back into stock.</div>
+
+  <h3>c. Reorder</h3>
+  <div class="row">
+    <div>
+      <ol class="steps">
+        <li>Open <b>Procurement</b>. Items at their reorder point are grouped by supplier with the number of packages needed to refill to par.</li>
+        <li>Adjust <b>Packages</b> if needed (e.g. a supplier minimum, or a slow week).</li>
+        <li>Tap <span class="ui">Create purchase order</span> for each supplier.</li>
+        <li><b>Place the order with the supplier</b> as you normally do (phone, email, portal). The app records the order; it doesn't send it.</li>
+      </ol>
+    </div>
+    <figure><img src="img/mgr-procurement.jpg" alt="Procurement"></figure>
+  </div>
+
+  <h3>d. Keep an eye on deliveries</h3>
+  <p>Staff check deliveries in on <b>Receiving</b> (Staff guide, section 7). Review the <b>Receiving log</b> for damage, shortages and late deliveries,
+    and follow up with suppliers. If an invoice shows a new price, enter it in the <b>Invoice $/pkg</b> column when receiving: the ingredient's
+    cost updates and the change appears under <b>Cost changes</b> on the Dashboard.</p>
+</section>
+
+<section class="newpage">
+  <h2><span class="num">5</span>Every week: schedule</h2>
+  <figure><img src="img/mgr-schedule.jpg" alt="Schedule, manager view"><figcaption>Warnings at the top: someone over their maximum hours, and an open shift.</figcaption></figure>
+  <div class="row">
+    <div>
+      <ul>
+        <li><b>Start next week:</b> go to next week (<span class="ui">▶</span>) and tap <span class="ui">Copy last week</span>, then adjust.</li>
+        <li><b>Move a shift:</b> drag it to another person or day. Hold <kbd>Ctrl</kbd> (or <kbd>Alt</kbd>/<kbd>Option</kbd>) while dropping to copy it.</li>
+        <li><b>Add a shift:</b> click an empty spot; use the Open / Mid / Close buttons for common times.</li>
+        <li><b>Edit or delete:</b> click the shift. On a phone or tablet, change the person or date here (dragging needs a mouse).</li>
+        <li><b>Fix the warnings:</b> red outline = double-booked; red hours = over their maximum; <b>Open shifts</b> row = nobody assigned yet.</li>
+        <li><b>Watch labor:</b> the bottom rows show labor cost and labor % of sales for each day.</li>
+      </ul>
+    </div>
+    <figure><img src="img/mgr-shift.jpg" alt="Shift editor"><figcaption>Assigning the open Saturday close.</figcaption></figure>
+  </div>
+  <div class="note"><b>Employees</b> (people on the schedule) are not the same as <b>users</b> (sign-in accounts). Add someone with
+    <span class="ui">+ Employee</span> (name, role, hourly rate, maximum hours per week), then give them a user account on Settings if they need to sign in.</div>
+</section>
+
+<section>
+  <h2><span class="num">6</span>Every week: counts, waste and costs</h2>
+  <h3>Stock count and variance</h3>
+  <p>Have staff count the high-value items weekly (fruit, protein, nut butters, cups), at the same time each week, e.g. Sunday close.
+    Then open <b>Counts &amp; Waste → Variance report</b>.</p>
+  <figure><img src="img/mgr-variance.jpg" alt="Variance report"><figcaption>Each count compared with what sales and waste say should be there. "% missing" in red is above 5% of what was used.</figcaption></figure>
+  <table>
+    <tr><th style="width:34%">If you see</th><th>Likely cause and what to do</th></tr>
+    <tr><td>Small shortfalls (under ~3%) across many items</td><td>Normal spillage and rounding. Keep counting; watch the trend.</td></tr>
+    <tr><td>One item consistently short</td><td>Over-portioning (check scoops and recipes with staff), unlogged waste, or theft. Remind staff to log waste.</td></tr>
+    <tr><td>An item <b>over</b> (positive)</td><td>A delivery received twice, sales counted twice (rung up <b>and</b> imported), or a counting error. Check the receiving log and imports.</td></tr>
+    <tr><td>Huge differences</td><td>Wrong unit: counted packages instead of oz/each. Recount; check the "1 pkg = …" line.</td></tr>
+  </table>
+  <div class="row">
+    <div>
+      <h3>Waste</h3>
+      <p>The <b>Waste this week</b> card totals waste by reason. Lots of <b>expired / spoiled</b>: order smaller amounts more often or lower the par level.
+        Lots of <b>remade drink</b>: retrain on the recipes involved. Check staff and free drinks against your policy.</p>
+    </div>
+    <figure><img src="img/mgr-waste-summary.jpg" alt="Waste this week"></figure>
+  </div>
+  <h3>Ingredient cost changes</h3>
+  <figure><img src="img/mgr-cost-changes.jpg" alt="Cost changes"><figcaption>Kale went up 13.9%, pushing Green Machine to 39.2% food cost, above the 35% target.</figcaption></figure>
+  <p>Every ingredient price change (typed in, from an invoice, or from Excel) shows here with its effect on each drink. When a drink goes above the
+    target, consider a recipe tweak, a price rise or another supplier. The owner sets the target on Settings.</p>
+</section>
+
+<section>
+  <h2><span class="num">7</span>Menu, ingredients and Excel</h2>
+  <div class="row">
+    <div>
+      <h3>Add or change a drink</h3>
+      <ol class="steps">
+        <li><b>Menu</b> → <span class="ui">+ New menu item</span>, or click a drink to edit it.</li>
+        <li>Add a picture, name, price and description.</li>
+        <li>Click ingredients to add them (or type and press Enter); set amounts with <span class="ui">−</span> / <span class="ui">+</span>.</li>
+        <li>Check the box on the left: cost, margin, food-cost %, a price for your target, and the allergens.</li>
+        <li><span class="ui">Save item</span>. <span class="ui">Duplicate as new</span> is the fastest way to make a size or flavour variation.</li>
+      </ol>
+      <h3>Add or change an ingredient</h3>
+      <p><b>Ingredients</b> → click a row (or <span class="ui">+ New ingredient</span>). Keep these right, because every cost and reorder depends on them:</p>
+      <ul>
+        <li><b>Quantity in package</b> in the recipe unit, and <b>Usable yield %</b> for produce you trim or peel.</li>
+        <li><b>Package cost</b> and <b>shipping</b>, <b>lead time</b>, <b>minimum order</b>.</li>
+        <li><b>Reorder point</b> and <b>par level</b> (use the suggestion from recent usage).</li>
+        <li><b>Allergens</b>: tick every one the ingredient contains. Drinks pick them up automatically.</li>
+      </ul>
+    </div>
+    <div>
+      <figure><img src="img/mgr-builder.jpg" alt="Menu builder"></figure>
+      <figure><img src="img/mgr-ingredient.jpg" alt="Ingredient editor"><figcaption>Kale: 64 oz per case but 75% usable, so it costs $0.43 per usable oz.</figcaption></figure>
+    </div>
+  </div>
+  <h3>Excel</h3>
+  <figure class="medium"><img src="img/mgr-excel.jpg" alt="Excel tab"></figure>
+  <p><b>Download inventory.xlsx</b> any time: it is rebuilt after every change with live formulas. You can edit ingredients, menu items and recipes in
+    Excel and <b>import</b> the file back. The import <b>replaces</b> ingredients, menu and recipes with what's in the file (a backup is saved first),
+    so always import the latest download, not an old copy.</p>
+</section>
+
+<section>
+  <h2><span class="num">8</span>Training new staff</h2>
+  <ul class="check">
+    <li>Create their account and link it to their employee record (section 2).</li>
+    <li>Give them the <b>Staff guide</b>; walk through signing in and choosing a password together.</li>
+    <li>On their first shift, show them: Record Sales (or tell them sales come from the till), allergens on Menu, logging waste, signing out.</li>
+    <li>Before they receive a delivery alone, do one together.</li>
+    <li>Before they count alone, show how to count in the unit shown ("1 pkg = …") and that blank means skipped.</li>
+    <li>After a week, give them the <b>Staff knowledge check</b> (pass mark 10 out of 12) and go over any wrong answers.</li>
+  </ul>
+</section>
+
+<section class="newpage card-ref">
+  <h2>Manager checklist</h2>
+  <div class="cols">
+    <div>
+      <h3>Every day</h3>
+      <ul class="check">
+        <li>Dashboard: reorder, out of stock, deliveries due</li>
+        <li>Import yesterday's sales from the till</li>
+        <li>Create purchase orders, then place them with suppliers</li>
+        <li>Check the receiving log for damage, shortages, delays</li>
+      </ul>
+      <h3>Every week</h3>
+      <ul class="check">
+        <li>Copy and adjust next week's schedule; clear the warnings</li>
+        <li>Weekly count of high-value items; review the variance report</li>
+        <li>Review waste by reason</li>
+        <li>Review cost changes and drinks over target</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Accounts</h3>
+      <ul class="check">
+        <li>New starter: add user, link employee, temporary password in person</li>
+        <li>Forgotten password: Reset password → new temporary one</li>
+        <li>Leaver: Disable user, Remove from roster</li>
+        <li>Managers / owners / roles / backups: ask the owner</li>
+      </ul>
+      <h3>Fixing mistakes</h3>
+      <ul class="check">
+        <li>Wrong waste: Waste log → Remove</li>
+        <li>Wrong import: Import history → Undo</li>
+        <li>Wrong sale, delivery or count: recount the affected items</li>
+        <li>Sales counted twice? Don't ring up <b>and</b> import</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
