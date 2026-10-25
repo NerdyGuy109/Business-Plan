@@ -1,0 +1,210 @@
+Date,Time,Time Zone,Category,Item,Qty,Price Point Name,Gross Sales,Discounts,Net Sales,Transaction ID,Event Type
+10/24/2026,07:03:04,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1001,Payment
+10/24/2026,07:03:14,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1007,Payment
+10/24/2026,07:05:27,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1003,Payment
+10/24/2026,07:05:35,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1004,Payment
+10/24/2026,07:07:36,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1009,Payment
+10/24/2026,07:08:18,Pacific Time (US & Canada),Drinks,Green Machine,1,Regular,$8.95,$0.00,$8.95,TX1008,Payment
+10/24/2026,07:11:44,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1016,Payment
+10/24/2026,07:13:31,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1013,Payment
+10/24/2026,07:29:23,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1015,Payment
+10/24/2026,07:36:07,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1005,Payment
+10/24/2026,07:36:19,Pacific Time (US & Canada),Gift Cards,Gift Card,1,$25,$25.00,$0.00,$25.00,TX1017,Payment
+10/24/2026,07:37:03,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1002,Payment
+10/24/2026,07:37:03,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1006,Payment
+10/24/2026,07:40:12,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1011,Payment
+10/24/2026,07:43:11,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1010,Payment
+10/24/2026,07:45:04,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1012,Payment
+10/24/2026,07:49:20,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1014,Payment
+10/24/2026,08:04:07,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1019,Payment
+10/24/2026,08:08:47,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1032,Payment
+10/24/2026,08:08:52,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1035,Payment
+10/24/2026,08:17:45,Pacific Time (US & Canada),Drinks,Tropical Escape,2,Regular,$17.00,$0.00,$17.00,TX1036,Payment
+10/24/2026,08:19:41,Pacific Time (US & Canada),Drinks,Green Machine,1,Regular,$8.95,$0.00,$8.95,TX1027,Payment
+10/24/2026,08:20:21,Pacific Time (US & Canada),Gift Cards,Gift Card,2,$25,$50.00,$0.00,$50.00,TX1023,Payment
+10/24/2026,08:26:02,Pacific Time (US & Canada),Drinks,Beet Boost,2,Regular,$17.00,$0.00,$17.00,TX1021,Payment
+10/24/2026,08:28:25,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1034,Payment
+10/24/2026,08:29:22,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1030,Payment
+10/24/2026,08:31:03,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1031,Payment
+10/24/2026,08:31:37,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1024,Payment
+10/24/2026,08:35:36,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1022,Payment
+10/24/2026,08:42:04,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1026,Payment
+10/24/2026,08:43:56,Pacific Time (US & Canada),Drinks,Tropical Escape,2,Regular,$17.00,$0.00,$17.00,TX1037,Payment
+10/24/2026,08:46:28,Pacific Time (US & Canada),Drinks,Berry Blast,2,Regular,$17.00,$0.00,$17.00,TX1018,Payment
+10/24/2026,08:48:21,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1020,Payment
+10/24/2026,08:52:28,Pacific Time (US & Canada),Drinks,Green Protein,2,Regular,$21.00,$0.00,$21.00,TX1028,Payment
+10/24/2026,08:53:05,Pacific Time (US & Canada),Gift Cards,Gift Card,1,$25,$25.00,$0.00,$25.00,TX1025,Payment
+10/24/2026,08:56:42,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1029,Payment
+10/24/2026,08:58:55,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1033,Payment
+10/24/2026,09:00:31,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1039,Payment
+10/24/2026,09:07:54,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1054,Payment
+10/24/2026,09:08:44,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1042,Payment
+10/24/2026,09:09:34,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1050,Payment
+10/24/2026,09:11:09,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1038,Payment
+10/24/2026,09:13:28,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1048,Payment
+10/24/2026,09:18:00,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1040,Payment
+10/24/2026,09:22:38,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1053,Payment
+10/24/2026,09:23:39,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1041,Payment
+10/24/2026,09:25:03,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1047,Payment
+10/24/2026,09:25:25,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1046,Payment
+10/24/2026,09:29:30,Pacific Time (US & Canada),Drinks,Berry Blast,2,Regular,$17.00,$0.00,$17.00,TX1055,Payment
+10/24/2026,09:38:03,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1049,Payment
+10/24/2026,09:39:01,Pacific Time (US & Canada),Drinks,Sunrise Carrot,2,Regular,$15.90,$0.00,$15.90,TX1051,Payment
+10/24/2026,09:39:24,Pacific Time (US & Canada),Drinks,Sunrise Carrot,2,Regular,$15.90,$0.00,$15.90,TX1052,Payment
+10/24/2026,09:41:43,Pacific Time (US & Canada),Drinks,PB Power Smoothie,2,Regular,$19.90,$0.00,$19.90,TX1043,Payment
+10/24/2026,09:43:51,Pacific Time (US & Canada),Gift Cards,Gift Card,2,$25,$50.00,$0.00,$50.00,TX1045,Payment
+10/24/2026,09:57:55,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1044,Payment
+10/24/2026,10:01:13,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1058,Payment
+10/24/2026,10:01:50,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1068,Payment
+10/24/2026,10:06:47,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1056,Payment
+10/24/2026,10:12:44,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1069,Payment
+10/24/2026,10:16:33,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1061,Payment
+10/24/2026,10:19:41,Pacific Time (US & Canada),Drinks,Green Machine,1,Regular,$8.95,$0.00,$8.95,TX1060,Payment
+10/24/2026,10:22:49,Pacific Time (US & Canada),Drinks,Strawberry Banana,2,Regular,$15.90,$0.00,$15.90,TX1062,Payment
+10/24/2026,10:23:05,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,2,Regular,$21.90,$0.00,$21.90,TX1071,Payment
+10/24/2026,10:25:47,Pacific Time (US & Canada),Gift Cards,Gift Card,1,$25,$25.00,$0.00,$25.00,TX1066,Payment
+10/24/2026,10:28:51,Pacific Time (US & Canada),Drinks,Green Protein,2,Regular,$21.00,$0.00,$21.00,TX1070,Payment
+10/24/2026,10:30:12,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1072,Payment
+10/24/2026,10:30:53,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1057,Payment
+10/24/2026,10:30:58,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1074,Payment
+10/24/2026,10:33:31,Pacific Time (US & Canada),Gift Cards,Gift Card,1,$25,$25.00,$0.00,$25.00,TX1067,Payment
+10/24/2026,10:39:51,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1064,Payment
+10/24/2026,10:39:57,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1073,Payment
+10/24/2026,10:44:34,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1059,Payment
+10/24/2026,10:49:32,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1063,Payment
+10/24/2026,10:54:12,Pacific Time (US & Canada),Gift Cards,Gift Card,2,$25,$50.00,$0.00,$50.00,TX1065,Payment
+10/24/2026,11:01:00,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1085,Payment
+10/24/2026,11:03:58,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1091,Payment
+10/24/2026,11:05:46,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1080,Payment
+10/24/2026,11:05:53,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1075,Payment
+10/24/2026,11:08:01,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1081,Payment
+10/24/2026,11:08:27,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1087,Payment
+10/24/2026,11:09:33,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1094,Payment
+10/24/2026,11:13:01,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1088,Payment
+10/24/2026,11:16:34,Pacific Time (US & Canada),Gift Cards,Gift Card,1,$25,$25.00,$0.00,$25.00,TX1090,Payment
+10/24/2026,11:22:09,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1084,Payment
+10/24/2026,11:24:50,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1076,Payment
+10/24/2026,11:28:49,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1095,Payment
+10/24/2026,11:29:42,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1092,Payment
+10/24/2026,11:29:51,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1082,Payment
+10/24/2026,11:30:56,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1077,Payment
+10/24/2026,11:32:15,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1089,Payment
+10/24/2026,11:33:26,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1093,Payment
+10/24/2026,11:40:21,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1078,Payment
+10/24/2026,11:41:06,Pacific Time (US & Canada),Gift Cards,Gift Card,2,$25,$50.00,$0.00,$50.00,TX1086,Payment
+10/24/2026,11:46:25,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1079,Payment
+10/24/2026,11:49:51,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1096,Payment
+10/24/2026,11:52:38,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1083,Payment
+10/24/2026,12:02:49,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1101,Payment
+10/24/2026,12:04:28,Pacific Time (US & Canada),Gift Cards,Gift Card,2,$25,$50.00,$0.00,$50.00,TX1103,Payment
+10/24/2026,12:07:25,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1109,Payment
+10/24/2026,12:17:28,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1105,Payment
+10/24/2026,12:20:43,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1098,Payment
+10/24/2026,12:30:32,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1106,Payment
+10/24/2026,12:30:50,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1099,Payment
+10/24/2026,12:32:38,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1104,Payment
+10/24/2026,12:35:01,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1102,Payment
+10/24/2026,12:35:03,Pacific Time (US & Canada),Gift Cards,Gift Card,1,$25,$25.00,$0.00,$25.00,TX1100,Payment
+10/24/2026,12:39:46,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1097,Payment
+10/24/2026,12:42:15,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1110,Payment
+10/24/2026,12:56:56,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1107,Payment
+10/24/2026,12:57:12,Pacific Time (US & Canada),Drinks,Peach Paradise,2,Regular,$17.90,$0.00,$17.90,TX1108,Payment
+10/24/2026,13:01:24,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1120,Payment
+10/24/2026,13:06:05,Pacific Time (US & Canada),Drinks,Ginger Shot,2,2 oz,$7.00,$0.00,$7.00,TX1123,Payment
+10/24/2026,13:08:52,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1125,Payment
+10/24/2026,13:09:16,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1113,Payment
+10/24/2026,13:09:45,Pacific Time (US & Canada),Drinks,Sunrise Carrot,2,Regular,$15.90,$0.00,$15.90,TX1112,Payment
+10/24/2026,13:10:45,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1116,Payment
+10/24/2026,13:14:47,Pacific Time (US & Canada),Drinks,Beet Boost,2,Regular,$17.00,$0.00,$17.00,TX1114,Payment
+10/24/2026,13:18:32,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1121,Payment
+10/24/2026,13:19:50,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1111,Payment
+10/24/2026,13:20:05,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1118,Payment
+10/24/2026,13:21:35,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1119,Payment
+10/24/2026,13:25:21,Pacific Time (US & Canada),Drinks,Tropical Escape,2,Regular,$17.00,$0.00,$17.00,TX1117,Payment
+10/24/2026,13:31:10,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1115,Payment
+10/24/2026,13:34:58,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1127,Payment
+10/24/2026,13:43:52,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1126,Payment
+10/24/2026,13:44:20,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1128,Payment
+10/24/2026,13:57:49,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1124,Payment
+10/24/2026,13:58:50,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1122,Payment
+10/24/2026,14:04:16,Pacific Time (US & Canada),Drinks,Green Protein,2,Regular,$21.00,$0.00,$21.00,TX1132,Payment
+10/24/2026,14:11:17,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1139,Payment
+10/24/2026,14:13:18,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1138,Payment
+10/24/2026,14:16:02,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1140,Payment
+10/24/2026,14:16:03,Pacific Time (US & Canada),Drinks,Sunrise Carrot,2,Regular,$15.90,$0.00,$15.90,TX1136,Payment
+10/24/2026,14:16:05,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1131,Payment
+10/24/2026,14:17:01,Pacific Time (US & Canada),Drinks,Tropical Escape,2,Regular,$17.00,$0.00,$17.00,TX1130,Payment
+10/24/2026,14:17:39,Pacific Time (US & Canada),Drinks,Tropical Escape,2,Regular,$17.00,$0.00,$17.00,TX1134,Payment
+10/24/2026,14:19:40,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1137,Payment
+10/24/2026,14:21:35,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1133,Payment
+10/24/2026,14:32:35,Pacific Time (US & Canada),Drinks,Green Machine,1,Regular,$8.95,$0.00,$8.95,TX1141,Payment
+10/24/2026,14:44:11,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1129,Payment
+10/24/2026,14:45:15,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1135,Payment
+10/24/2026,15:00:16,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1154,Payment
+10/24/2026,15:03:05,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1150,Payment
+10/24/2026,15:08:25,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1147,Payment
+10/24/2026,15:19:44,Pacific Time (US & Canada),Drinks,Tropical Escape,2,Regular,$17.00,$0.00,$17.00,TX1145,Payment
+10/24/2026,15:21:12,Pacific Time (US & Canada),Drinks,Ginger Shot,2,2 oz,$7.00,$0.00,$7.00,TX1146,Payment
+10/24/2026,15:29:11,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1153,Payment
+10/24/2026,15:35:20,Pacific Time (US & Canada),Drinks,Strawberry Banana,2,Regular,$15.90,$0.00,$15.90,TX1155,Payment
+10/24/2026,15:38:15,Pacific Time (US & Canada),Drinks,Mint Lemonade,2,Regular,$11.00,$0.00,$11.00,TX1152,Payment
+10/24/2026,15:41:27,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1143,Payment
+10/24/2026,15:42:10,Pacific Time (US & Canada),Drinks,Peach Paradise,-1,Regular,-$8.95,$0.00,-$8.95,TX9001,Refund
+10/24/2026,15:47:56,Pacific Time (US & Canada),Drinks,Green Machine,1,Regular,$8.95,$0.00,$8.95,TX1149,Payment
+10/24/2026,15:53:08,Pacific Time (US & Canada),Drinks,Strawberry Banana,2,Regular,$15.90,$0.00,$15.90,TX1148,Payment
+10/24/2026,15:53:56,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1144,Payment
+10/24/2026,15:55:32,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1151,Payment
+10/24/2026,15:56:19,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1156,Payment
+10/24/2026,15:59:28,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1142,Payment
+10/24/2026,16:05:09,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1160,Payment
+10/24/2026,16:14:05,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1162,Payment
+10/24/2026,16:20:46,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1165,Payment
+10/24/2026,16:21:24,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1157,Payment
+10/24/2026,16:25:01,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1161,Payment
+10/24/2026,16:32:08,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1169,Payment
+10/24/2026,16:32:41,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1158,Payment
+10/24/2026,16:36:53,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1170,Payment
+10/24/2026,16:40:27,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,2,Regular,$21.90,$0.00,$21.90,TX1168,Payment
+10/24/2026,16:43:37,Pacific Time (US & Canada),Gift Cards,Gift Card,1,$25,$25.00,$0.00,$25.00,TX1171,Payment
+10/24/2026,16:45:50,Pacific Time (US & Canada),Drinks,Beet Boost,1,Regular,$8.50,$0.00,$8.50,TX1164,Payment
+10/24/2026,16:46:39,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1166,Payment
+10/24/2026,16:49:00,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1159,Payment
+10/24/2026,16:52:53,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1167,Payment
+10/24/2026,16:54:48,Pacific Time (US & Canada),Drinks,Green Protein,2,Regular,$21.00,$0.00,$21.00,TX1163,Payment
+10/24/2026,17:02:08,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1173,Payment
+10/24/2026,17:04:47,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1179,Payment
+10/24/2026,17:05:59,Pacific Time (US & Canada),Drinks,PB Power Smoothie,1,Regular,$9.95,$0.00,$9.95,TX1192,Payment
+10/24/2026,17:06:24,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1174,Payment
+10/24/2026,17:07:57,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1191,Payment
+10/24/2026,17:08:00,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1187,Payment
+10/24/2026,17:15:31,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1176,Payment
+10/24/2026,17:17:43,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1188,Payment
+10/24/2026,17:18:29,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1190,Payment
+10/24/2026,17:28:17,Pacific Time (US & Canada),Drinks,PB Power Smoothie,2,Regular,$19.90,$0.00,$19.90,TX1194,Payment
+10/24/2026,17:29:04,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1193,Payment
+10/24/2026,17:29:31,Pacific Time (US & Canada),Drinks,Ginger Shot,1,2 oz,$3.50,$0.00,$3.50,TX1182,Payment
+10/24/2026,17:38:09,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1185,Payment
+10/24/2026,17:39:40,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1184,Payment
+10/24/2026,17:40:01,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1175,Payment
+10/24/2026,17:43:31,Pacific Time (US & Canada),Drinks,Sunrise Carrot,1,Regular,$7.95,$0.00,$7.95,TX1189,Payment
+10/24/2026,17:44:41,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1172,Payment
+10/24/2026,17:47:44,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1186,Payment
+10/24/2026,17:48:13,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1181,Payment
+10/24/2026,17:51:04,Pacific Time (US & Canada),Drinks,Peach Paradise,1,Regular,$8.95,$0.00,$8.95,TX1177,Payment
+10/24/2026,17:51:04,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1180,Payment
+10/24/2026,17:57:34,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,2,Regular,$21.90,$0.00,$21.90,TX1178,Payment
+10/24/2026,17:58:43,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1183,Payment
+10/24/2026,17:59:13,Pacific Time (US & Canada),Drinks,Tropical Escape,1,Regular,$8.50,$0.00,$8.50,TX1195,Payment
+10/24/2026,18:08:38,Pacific Time (US & Canada),Drinks,Peach Paradise,2,Regular,$17.90,$0.00,$17.90,TX1197,Payment
+10/24/2026,18:10:00,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1200,Payment
+10/24/2026,18:12:45,Pacific Time (US & Canada),Drinks,Sunrise Carrot,2,Regular,$15.90,$0.00,$15.90,TX1205,Payment
+10/24/2026,18:18:16,Pacific Time (US & Canada),Drinks,Green Machine,2,Regular,$17.90,$0.00,$17.90,TX1206,Payment
+10/24/2026,18:21:00,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1203,Payment
+10/24/2026,18:22:24,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1202,Payment
+10/24/2026,18:24:55,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1207,Payment
+10/24/2026,18:25:19,Pacific Time (US & Canada),Drinks,Berry Blast,1,Regular,$8.50,$0.00,$8.50,TX1201,Payment
+10/24/2026,18:31:57,Pacific Time (US & Canada),Drinks,Acai Energy Bowl Smoothie,1,Regular,$10.95,$0.00,$10.95,TX1199,Payment
+10/24/2026,18:47:33,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1196,Payment
+10/24/2026,18:53:25,Pacific Time (US & Canada),Drinks,Strawberry Banana,1,Regular,$7.95,$0.00,$7.95,TX1204,Payment
+10/24/2026,18:56:07,Pacific Time (US & Canada),Drinks,Mint Lemonade,1,Regular,$5.50,$0.00,$5.50,TX1198,Payment
+10/24/2026,18:59:27,Pacific Time (US & Canada),Drinks,Green Protein,1,Regular,$10.50,$0.00,$10.50,TX1208,Payment

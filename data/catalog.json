@@ -1,4 +1,8 @@
 {
+  "settings": {
+    "business_name": "",
+    "target_food_cost": 0.35
+  },
   "ingredients": [
     {
       "id": "ING-001",
@@ -9,6 +13,7 @@
       "supplier_sku": "SKU-1007",
       "package_desc": "1 gal jug",
       "package_qty": 128.0,
+      "yield_pct": 100.0,
       "package_cost": 9.5,
       "shipping_cost": 1.2,
       "lead_time_days": 3,
@@ -17,7 +22,8 @@
       "on_hand": 1640.0,
       "reorder_point": 1024.0,
       "par_level": 3072.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-002",
@@ -28,6 +34,7 @@
       "supplier_sku": "SKU-1014",
       "package_desc": "1 gal jug",
       "package_qty": 128.0,
+      "yield_pct": 100.0,
       "package_cost": 11.25,
       "shipping_cost": 1.2,
       "lead_time_days": 3,
@@ -36,7 +43,8 @@
       "on_hand": 720.0,
       "reorder_point": 1024.0,
       "par_level": 3072.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-003",
@@ -47,6 +55,7 @@
       "supplier_sku": "SKU-1021",
       "package_desc": "46 fl oz can",
       "package_qty": 46.0,
+      "yield_pct": 100.0,
       "package_cost": 3.4,
       "shipping_cost": 0.4,
       "lead_time_days": 3,
@@ -55,7 +64,8 @@
       "on_hand": 880.0,
       "reorder_point": 552.0,
       "par_level": 1656.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-004",
@@ -66,6 +76,7 @@
       "supplier_sku": "SKU-1028",
       "package_desc": "1 L carton x 12",
       "package_qty": 405.6,
+      "yield_pct": 100.0,
       "package_cost": 38.0,
       "shipping_cost": 6.5,
       "lead_time_days": 7,
@@ -74,7 +85,8 @@
       "on_hand": 2400.0,
       "reorder_point": 1600.0,
       "par_level": 4800.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-005",
@@ -85,6 +97,7 @@
       "supplier_sku": "SKU-1035",
       "package_desc": "64 fl oz carton x 6",
       "package_qty": 384.0,
+      "yield_pct": 100.0,
       "package_cost": 21.0,
       "shipping_cost": 3.0,
       "lead_time_days": 4,
@@ -93,7 +106,10 @@
       "on_hand": 1200.0,
       "reorder_point": 1000.0,
       "par_level": 3072.0,
-      "notes": ""
+      "notes": "",
+      "allergens": [
+        "tree nuts"
+      ]
     },
     {
       "id": "ING-006",
@@ -104,6 +120,7 @@
       "supplier_sku": "SKU-1042",
       "package_desc": "32 oz tub x 6",
       "package_qty": 192.0,
+      "yield_pct": 100.0,
       "package_cost": 27.0,
       "shipping_cost": 3.0,
       "lead_time_days": 4,
@@ -112,7 +129,10 @@
       "on_hand": 380.0,
       "reorder_point": 480.0,
       "par_level": 1536.0,
-      "notes": ""
+      "notes": "",
+      "allergens": [
+        "milk"
+      ]
     },
     {
       "id": "ING-007",
@@ -123,6 +143,7 @@
       "supplier_sku": "SKU-1049",
       "package_desc": "40 lb case (~100 ct)",
       "package_qty": 100.0,
+      "yield_pct": 100.0,
       "package_cost": 28.0,
       "shipping_cost": 4.0,
       "lead_time_days": 2,
@@ -131,7 +152,8 @@
       "on_hand": 256.0,
       "reorder_point": 200.0,
       "par_level": 800.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-008",
@@ -142,6 +164,7 @@
       "supplier_sku": "SKU-1056",
       "package_desc": "5 lb bag x 4",
       "package_qty": 320.0,
+      "yield_pct": 100.0,
       "package_cost": 42.0,
       "shipping_cost": 8.0,
       "lead_time_days": 5,
@@ -150,7 +173,8 @@
       "on_hand": 1640.0,
       "reorder_point": 960.0,
       "par_level": 3840.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-009",
@@ -161,6 +185,7 @@
       "supplier_sku": "SKU-1063",
       "package_desc": "5 lb bag x 4",
       "package_qty": 320.0,
+      "yield_pct": 100.0,
       "package_cost": 46.0,
       "shipping_cost": 8.0,
       "lead_time_days": 5,
@@ -169,7 +194,8 @@
       "on_hand": 600.0,
       "reorder_point": 960.0,
       "par_level": 3840.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-010",
@@ -180,6 +206,7 @@
       "supplier_sku": "SKU-1070",
       "package_desc": "5 lb bag x 4",
       "package_qty": 320.0,
+      "yield_pct": 100.0,
       "package_cost": 44.0,
       "shipping_cost": 8.0,
       "lead_time_days": 5,
@@ -188,7 +215,8 @@
       "on_hand": 2080.0,
       "reorder_point": 960.0,
       "par_level": 3840.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-011",
@@ -199,6 +227,7 @@
       "supplier_sku": "SKU-1077",
       "package_desc": "5 lb bag x 4",
       "package_qty": 320.0,
+      "yield_pct": 100.0,
       "package_cost": 58.0,
       "shipping_cost": 8.0,
       "lead_time_days": 5,
@@ -207,7 +236,8 @@
       "on_hand": 1560.0,
       "reorder_point": 960.0,
       "par_level": 3840.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-012",
@@ -218,6 +248,7 @@
       "supplier_sku": "SKU-1084",
       "package_desc": "10 lb case",
       "package_qty": 160.0,
+      "yield_pct": 100.0,
       "package_cost": 22.0,
       "shipping_cost": 3.0,
       "lead_time_days": 2,
@@ -226,7 +257,8 @@
       "on_hand": 280.0,
       "reorder_point": 256.0,
       "par_level": 960.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-013",
@@ -237,6 +269,7 @@
       "supplier_sku": "SKU-1091",
       "package_desc": "Case of 115",
       "package_qty": 115.0,
+      "yield_pct": 100.0,
       "package_cost": 36.0,
       "shipping_cost": 4.0,
       "lead_time_days": 2,
@@ -245,7 +278,8 @@
       "on_hand": 192.0,
       "reorder_point": 120.0,
       "par_level": 460.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-014",
@@ -256,7 +290,8 @@
       "supplier_sku": "SKU-1098",
       "package_desc": "4 lb case",
       "package_qty": 64.0,
-      "package_cost": 14.0,
+      "yield_pct": 100.0,
+      "package_cost": 15.25,
       "shipping_cost": 2.5,
       "lead_time_days": 2,
       "shelf_life_days": 7,
@@ -264,7 +299,8 @@
       "on_hand": 120.0,
       "reorder_point": 128.0,
       "par_level": 512.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-015",
@@ -275,7 +311,8 @@
       "supplier_sku": "SKU-1105",
       "package_desc": "4 lb case",
       "package_qty": 64.0,
-      "package_cost": 15.5,
+      "yield_pct": 75.0,
+      "package_cost": 18.0,
       "shipping_cost": 2.5,
       "lead_time_days": 2,
       "shelf_life_days": 7,
@@ -283,7 +320,8 @@
       "on_hand": 280.0,
       "reorder_point": 128.0,
       "par_level": 512.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-016",
@@ -294,6 +332,7 @@
       "supplier_sku": "SKU-1112",
       "package_desc": "Case of 24",
       "package_qty": 24.0,
+      "yield_pct": 100.0,
       "package_cost": 18.0,
       "shipping_cost": 2.5,
       "lead_time_days": 2,
@@ -302,7 +341,8 @@
       "on_hand": 80.0,
       "reorder_point": 40.0,
       "par_level": 192.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-017",
@@ -313,6 +353,7 @@
       "supplier_sku": "SKU-1119",
       "package_desc": "30 lb case",
       "package_qty": 480.0,
+      "yield_pct": 80.0,
       "package_cost": 32.0,
       "shipping_cost": 4.0,
       "lead_time_days": 2,
@@ -321,7 +362,8 @@
       "on_hand": 1200.0,
       "reorder_point": 640.0,
       "par_level": 1920.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-018",
@@ -332,6 +374,7 @@
       "supplier_sku": "SKU-1126",
       "package_desc": "25 lb bag",
       "package_qty": 400.0,
+      "yield_pct": 85.0,
       "package_cost": 19.0,
       "shipping_cost": 3.0,
       "lead_time_days": 2,
@@ -340,7 +383,8 @@
       "on_hand": 1040.0,
       "reorder_point": 640.0,
       "par_level": 3200.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-019",
@@ -351,6 +395,7 @@
       "supplier_sku": "SKU-1133",
       "package_desc": "25 lb bag",
       "package_qty": 400.0,
+      "yield_pct": 80.0,
       "package_cost": 24.0,
       "shipping_cost": 3.0,
       "lead_time_days": 2,
@@ -359,7 +404,8 @@
       "on_hand": 840.0,
       "reorder_point": 400.0,
       "par_level": 1600.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-020",
@@ -370,6 +416,7 @@
       "supplier_sku": "SKU-1140",
       "package_desc": "5 lb box",
       "package_qty": 80.0,
+      "yield_pct": 85.0,
       "package_cost": 22.0,
       "shipping_cost": 1.5,
       "lead_time_days": 2,
@@ -378,7 +425,8 @@
       "on_hand": 96.0,
       "reorder_point": 64.0,
       "par_level": 320.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-021",
@@ -389,6 +437,7 @@
       "supplier_sku": "SKU-1147",
       "package_desc": "1 lb bag",
       "package_qty": 16.0,
+      "yield_pct": 85.0,
       "package_cost": 8.5,
       "shipping_cost": 0.75,
       "lead_time_days": 2,
@@ -397,7 +446,8 @@
       "on_hand": 72.0,
       "reorder_point": 32.0,
       "par_level": 128.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-022",
@@ -408,6 +458,7 @@
       "supplier_sku": "SKU-1154",
       "package_desc": "1 lb bunch case",
       "package_qty": 16.0,
+      "yield_pct": 70.0,
       "package_cost": 12.0,
       "shipping_cost": 1.0,
       "lead_time_days": 2,
@@ -416,7 +467,8 @@
       "on_hand": 36.0,
       "reorder_point": 16.0,
       "par_level": 64.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-023",
@@ -427,6 +479,7 @@
       "supplier_sku": "SKU-1161",
       "package_desc": "5 lb jar",
       "package_qty": 80.0,
+      "yield_pct": 100.0,
       "package_cost": 32.0,
       "shipping_cost": 5.0,
       "lead_time_days": 6,
@@ -435,7 +488,8 @@
       "on_hand": 240.0,
       "reorder_point": 96.0,
       "par_level": 640.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-024",
@@ -446,6 +500,7 @@
       "supplier_sku": "SKU-1168",
       "package_desc": "46 fl oz bottle",
       "package_qty": 46.0,
+      "yield_pct": 100.0,
       "package_cost": 11.0,
       "shipping_cost": 1.0,
       "lead_time_days": 4,
@@ -454,7 +509,8 @@
       "on_hand": 280.0,
       "reorder_point": 120.0,
       "par_level": 552.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-025",
@@ -465,6 +521,7 @@
       "supplier_sku": "SKU-1175",
       "package_desc": "5 lb tub (~70 scoops)",
       "package_qty": 70.0,
+      "yield_pct": 100.0,
       "package_cost": 54.0,
       "shipping_cost": 6.0,
       "lead_time_days": 7,
@@ -473,7 +530,10 @@
       "on_hand": 320.0,
       "reorder_point": 160.0,
       "par_level": 560.0,
-      "notes": ""
+      "notes": "",
+      "allergens": [
+        "milk"
+      ]
     },
     {
       "id": "ING-026",
@@ -484,6 +544,7 @@
       "supplier_sku": "SKU-1182",
       "package_desc": "2 lb bag (~85 tbsp)",
       "package_qty": 85.0,
+      "yield_pct": 100.0,
       "package_cost": 13.0,
       "shipping_cost": 2.0,
       "lead_time_days": 7,
@@ -492,7 +553,8 @@
       "on_hand": 240.0,
       "reorder_point": 120.0,
       "par_level": 680.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-027",
@@ -503,6 +565,7 @@
       "supplier_sku": "SKU-1189",
       "package_desc": "5 lb tub (~150 tbsp)",
       "package_qty": 150.0,
+      "yield_pct": 100.0,
       "package_cost": 17.0,
       "shipping_cost": 2.0,
       "lead_time_days": 4,
@@ -511,7 +574,10 @@
       "on_hand": 480.0,
       "reorder_point": 200.0,
       "par_level": 1200.0,
-      "notes": ""
+      "notes": "",
+      "allergens": [
+        "peanuts"
+      ]
     },
     {
       "id": "ING-028",
@@ -522,6 +588,7 @@
       "supplier_sku": "SKU-1196",
       "package_desc": "Case of 48 x 100 g",
       "package_qty": 48.0,
+      "yield_pct": 100.0,
       "package_cost": 62.0,
       "shipping_cost": 9.0,
       "lead_time_days": 10,
@@ -530,7 +597,8 @@
       "on_hand": 88.0,
       "reorder_point": 120.0,
       "par_level": 480.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-029",
@@ -541,6 +609,7 @@
       "supplier_sku": "SKU-1203",
       "package_desc": "Ice machine (no cost)",
       "package_qty": 1000.0,
+      "yield_pct": 100.0,
       "package_cost": 0.0,
       "shipping_cost": 0.0,
       "lead_time_days": 0,
@@ -549,7 +618,8 @@
       "on_hand": 5000.0,
       "reorder_point": 0.0,
       "par_level": 5000.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-030",
@@ -560,6 +630,7 @@
       "supplier_sku": "SKU-1210",
       "package_desc": "Case of 500",
       "package_qty": 500.0,
+      "yield_pct": 100.0,
       "package_cost": 85.0,
       "shipping_cost": 12.0,
       "lead_time_days": 6,
@@ -568,7 +639,8 @@
       "on_hand": 1520.0,
       "reorder_point": 1000.0,
       "par_level": 4000.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     },
     {
       "id": "ING-031",
@@ -579,6 +651,7 @@
       "supplier_sku": "SKU-1217",
       "package_desc": "Case of 400",
       "package_qty": 400.0,
+      "yield_pct": 100.0,
       "package_cost": 92.0,
       "shipping_cost": 12.0,
       "lead_time_days": 6,
@@ -587,7 +660,8 @@
       "on_hand": 560.0,
       "reorder_point": 800.0,
       "par_level": 3200.0,
-      "notes": ""
+      "notes": "",
+      "allergens": []
     }
   ],
   "items": [
@@ -1924,14 +1998,16 @@
               "expected": 6,
               "good": 6,
               "damaged": 0,
-              "note": ""
+              "note": "",
+              "invoice_cost": 15.25
             },
             {
               "ingredient_id": "ING-007",
               "expected": 2,
               "good": 2,
               "damaged": 0,
-              "note": ""
+              "note": "",
+              "invoice_cost": null
             }
           ]
         }
@@ -1975,14 +2051,16 @@
               "expected": 4,
               "good": 4,
               "damaged": 0,
-              "note": ""
+              "note": "",
+              "invoice_cost": null
             },
             {
               "ingredient_id": "ING-010",
               "expected": 3,
               "good": 2,
               "damaged": 1,
-              "note": "Bags split, thawed. Photo taken; supplier to credit or resend."
+              "note": "Bags split, thawed. Photo taken; supplier to credit or resend.",
+              "invoice_cost": null
             }
           ]
         }
@@ -2596,6 +2674,212 @@
       "end": "20:00",
       "role": "Juicer",
       "notes": "Saturday close"
+    }
+  ],
+  "price_changes": [
+    {
+      "id": "PC-001",
+      "at": "2026-10-18T08:15",
+      "ingredient_id": "ING-014",
+      "ingredient": "Spinach",
+      "unit": "oz",
+      "source": "invoice on PO-001",
+      "old": {
+        "package_cost": 14.0,
+        "shipping_cost": 2.5,
+        "unit_cost": 0.25781
+      },
+      "new": {
+        "package_cost": 15.25,
+        "shipping_cost": 2.5,
+        "unit_cost": 0.27734
+      },
+      "items": [
+        {
+          "id": "MI-001",
+          "name": "Green Machine",
+          "price": 8.95,
+          "old_cost": 3.3643,
+          "new_cost": 3.4033
+        },
+        {
+          "id": "MI-010",
+          "name": "Green Protein",
+          "price": 10.5,
+          "old_cost": 2.9551,
+          "new_cost": 2.9844
+        }
+      ]
+    },
+    {
+      "id": "PC-002",
+      "at": "2026-10-21T16:20",
+      "ingredient_id": "ING-015",
+      "ingredient": "Kale",
+      "unit": "oz",
+      "source": "edited by hand",
+      "old": {
+        "package_cost": 15.5,
+        "shipping_cost": 2.5,
+        "unit_cost": 0.375
+      },
+      "new": {
+        "package_cost": 18.0,
+        "shipping_cost": 2.5,
+        "unit_cost": 0.42708
+      },
+      "items": [
+        {
+          "id": "MI-001",
+          "name": "Green Machine",
+          "price": 8.95,
+          "old_cost": 3.4033,
+          "new_cost": 3.5075
+        }
+      ]
+    }
+  ],
+  "pos_aliases": {},
+  "imports": [],
+  "counts": [
+    {
+      "id": "CT-001",
+      "at": "2026-10-22T20:30",
+      "counted_by": "EMP-001",
+      "notes": "Weekly count of high-value items",
+      "lines": [
+        {
+          "ingredient_id": "ING-008",
+          "expected": 1640.0,
+          "counted": 1490.0,
+          "variance": -150.0,
+          "unit_cost": 0.15625,
+          "usage_since": "2026-10-08T20:30",
+          "theoretical_usage": 2774.0
+        },
+        {
+          "ingredient_id": "ING-025",
+          "expected": 320.0,
+          "counted": 291.0,
+          "variance": -29.0,
+          "unit_cost": 0.85714,
+          "usage_since": "2026-10-08T20:30",
+          "theoretical_usage": 484.0
+        },
+        {
+          "ingredient_id": "ING-027",
+          "expected": 480.0,
+          "counted": 466.0,
+          "variance": -14.0,
+          "unit_cost": 0.12667,
+          "usage_since": "2026-10-08T20:30",
+          "theoretical_usage": 508.0
+        },
+        {
+          "ingredient_id": "ING-009",
+          "expected": 600.0,
+          "counted": 555.0,
+          "variance": -45.0,
+          "unit_cost": 0.16875,
+          "usage_since": "2026-10-08T20:30",
+          "theoretical_usage": 2487.0
+        },
+        {
+          "ingredient_id": "ING-028",
+          "expected": 88.0,
+          "counted": 88.0,
+          "variance": 0.0,
+          "unit_cost": 1.47917,
+          "usage_since": "2026-10-08T20:30",
+          "theoretical_usage": 225.0
+        },
+        {
+          "ingredient_id": "ING-006",
+          "expected": 380.0,
+          "counted": 320.0,
+          "variance": -60.0,
+          "unit_cost": 0.15625,
+          "usage_since": "2026-10-08T20:30",
+          "theoretical_usage": 2224.0
+        }
+      ],
+      "variance_value": -67.04
+    }
+  ],
+  "waste": [
+    {
+      "id": "WS-001",
+      "at": "2026-10-19T08:10",
+      "by": "EMP-002",
+      "kind": "ingredient",
+      "qty": 24.0,
+      "reason": "expired / spoiled",
+      "note": "Slimy bag at the back of the walk-in",
+      "ingredient_id": "ING-014",
+      "name": "Spinach",
+      "unit": "oz",
+      "cost": 6.66
+    },
+    {
+      "id": "WS-002",
+      "at": "2026-10-20T12:45",
+      "by": "EMP-003",
+      "kind": "item",
+      "qty": 2.0,
+      "reason": "remade drink",
+      "note": "Wrong milk used",
+      "item_id": "MI-005",
+      "name": "Peach Paradise",
+      "cost": 6.05
+    },
+    {
+      "id": "WS-003",
+      "at": "2026-10-21T15:20",
+      "by": "EMP-004",
+      "kind": "item",
+      "qty": 1.0,
+      "reason": "spilled / dropped",
+      "note": "",
+      "item_id": "MI-009",
+      "name": "PB Power",
+      "cost": 2.71
+    },
+    {
+      "id": "WS-004",
+      "at": "2026-10-22T09:05",
+      "by": "EMP-001",
+      "kind": "ingredient",
+      "qty": 9.0,
+      "reason": "expired / spoiled",
+      "note": "Too ripe",
+      "ingredient_id": "ING-007",
+      "name": "Banana",
+      "unit": "each",
+      "cost": 2.88
+    },
+    {
+      "id": "WS-005",
+      "at": "2026-10-23T17:30",
+      "by": "EMP-002",
+      "kind": "item",
+      "qty": 3.0,
+      "reason": "staff drink",
+      "note": "",
+      "item_id": "MI-001",
+      "name": "Green Machine",
+      "cost": 10.21
+    },
+    {
+      "id": "WS-006",
+      "at": "2026-10-24T11:00",
+      "by": "EMP-005",
+      "kind": "item",
+      "qty": 4.0,
+      "reason": "free / comped drink",
+      "note": "Sampling at the door",
+      "item_id": "MI-004",
+      "name": "Ginger Shot",
+      "cost": 2.54
     }
   ]
 }

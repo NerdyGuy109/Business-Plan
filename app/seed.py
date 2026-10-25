@@ -111,6 +111,12 @@ PATTERN = {
     5: [(d, *MID) for d in (0, 1, 3)] + [(6, *OPEN)],
 }
 
+ALLERGENS = {"Almond Milk": ["tree nuts"], "Greek Yogurt": ["milk"], "Whey Protein": ["milk"],
+             "Peanut Butter": ["peanuts"]}
+
+# Usable share after trimming / peeling (whole produce bought by weight).
+YIELDS = {"Ginger Root": 85, "Turmeric Root": 85, "Celery": 80, "Carrot": 85, "Beet": 80, "Kale": 75, "Mint": 70}
+
 FIELDS = ["name", "category", "unit", "supplier", "package_desc", "package_qty", "package_cost",
           "shipping_cost", "lead_time_days", "shelf_life_days", "min_order_packages", "on_hand",
           "reorder_point", "par_level"]
@@ -122,6 +128,8 @@ def build(store: Store, with_sales=True):
     for n, row in enumerate(INGREDIENTS, start=1):
         payload = dict(zip(FIELDS, row))
         payload["supplier_sku"] = f"SKU-{1000 + n * 7}"
+        payload["allergens"] = ALLERGENS.get(payload["name"], [])
+        payload["yield_pct"] = YIELDS.get(payload["name"], 100)
         ids[payload["name"]] = store.upsert_ingredient(payload)["id"]
     for name, cat, size, price, emoji, desc, recipe in ITEMS:
         store.upsert_item({
@@ -173,7 +181,9 @@ def _purchase_orders(store, ids):
     po = order("GreenLeaf Produce", [("Spinach", 6), ("Banana", 2)], -9, -7)
     store.receive_purchase_order(po["id"], {
         "received_at": f"{day(-7)}T08:15", "received_by": emp["Jordan"], "reference": "INV-44817",
-        "lines": [{"ingredient_id": ids["Spinach"], "good": 6}, {"ingredient_id": ids["Banana"], "good": 2}]})
+        "lines": [{"ingredient_id": ids["Spinach"], "good": 6, "invoice_cost": 15.25},
+                  {"ingredient_id": ids["Banana"], "good": 2}]})
+    store.data["price_changes"][-1]["at"] = f"{day(-7)}T08:15"
     # A day late, one case crushed: the damaged case is still owed.
     po = order("Frosty Farms", [("Strawberries (frozen)", 4), ("Peach (frozen)", 3)], -8, -3)
     store.receive_purchase_order(po["id"], {
@@ -191,6 +201,39 @@ def _purchase_orders(store, ids):
 
     for ing in store.data["ingredients"]:
         ing["on_hand"] = stock[ing["id"]]
+
+    # A weekly count of the expensive items, and this week's waste.
+    stock = {i["id"]: i["on_hand"] for i in store.data["ingredients"]}
+    shortfall = {"Strawberries (frozen)": 150, "Whey Protein": 29, "Peanut Butter": 14, "Mango (frozen)": 45,
+                 "Acai Packs (frozen)": 0, "Greek Yogurt": 60}
+    store.record_count({
+        "at": f"{day(-3)}T20:30", "counted_by": emp["Maya"], "notes": "Weekly count of high-value items",
+        "lines": [{"ingredient_id": ids[n], "counted": stock[ids[n]] - short} for n, short in shortfall.items()]})
+    monday = today - timedelta(days=today.weekday())
+    for offset, hour, payload in [
+        (0, "08:10", {"kind": "ingredient", "ingredient_id": ids["Spinach"], "qty": 24, "reason": "expired / spoiled",
+                      "note": "Slimy bag at the back of the walk-in", "by": emp["Jordan"]}),
+        (1, "12:45", {"kind": "item", "item_id": store.data["items"][4]["id"], "qty": 2, "reason": "remade drink",
+                      "note": "Wrong milk used", "by": emp["Sam"]}),
+        (2, "15:20", {"kind": "item", "item_id": store.data["items"][8]["id"], "qty": 1, "reason": "spilled / dropped",
+                      "by": emp["Alex"]}),
+        (3, "09:05", {"kind": "ingredient", "ingredient_id": ids["Banana"], "qty": 9, "reason": "expired / spoiled",
+                      "note": "Too ripe", "by": emp["Maya"]}),
+        (4, "17:30", {"kind": "item", "item_id": store.data["items"][0]["id"], "qty": 3, "reason": "staff drink",
+                      "by": emp["Jordan"]}),
+        (5, "11:00", {"kind": "item", "item_id": store.data["items"][3]["id"], "qty": 4, "reason": "free / comped drink",
+                      "note": "Sampling at the door", "by": emp["Riley"]}),
+    ]:
+        when = monday + timedelta(days=offset)
+        if when <= today:
+            store.record_waste({**payload, "at": f"{when.isoformat()}T{hour}"})
+    for ing in store.data["ingredients"]:
+        ing["on_hand"] = stock[ing["id"]]
+
+    # A supplier price rise entered by hand.
+    kale = store.ingredient(ids["Kale"])
+    store.upsert_ingredient({**kale, "package_cost": 18.00})
+    store.data["price_changes"][-1]["at"] = f"{day(-4)}T16:20"
 
 
 if __name__ == "__main__":

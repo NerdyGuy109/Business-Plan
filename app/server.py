@@ -15,6 +15,7 @@ import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlparse
 
+from . import pos_import
 from .excel import EXPORT_PATH, export_listener, export_workbook, import_workbook
 from .store import IMAGE_DIR, ROOT, Store, ValidationError
 
@@ -156,6 +157,28 @@ class Handler(BaseHTTPRequestHandler):
                 with open(os.path.join(IMAGE_DIR, fname), "wb") as f:
                     f.write(raw)
                 return self._send(200, {"image": fname})
+            if path == "/api/sales-import/preview" and method == "POST":
+                a = pos_import.analyse(store, body.get("csv", ""), body.get("mapping"), body.get("aliases"))
+                a.pop("sales")
+                return self._send(200, a)
+            if path == "/api/sales-import" and method == "POST":
+                entry = pos_import.commit(store, body.get("csv", ""), body.get("mapping"), body.get("aliases"),
+                                          body.get("filename", ""), bool(body.get("force")))
+                return self._ok({"imported": entry})
+            m = re.match(r"^/api/sales-import/([\w-]+)/undo$", path)
+            if m and method == "POST":
+                return self._ok({"undone": pos_import.undo(store, m.group(1))})
+            if path == "/api/counts" and method == "POST":
+                return self._ok({"saved": store.record_count(body)})
+            if path == "/api/waste" and method == "POST":
+                return self._ok({"saved": store.record_waste(body)})
+            m = re.match(r"^/api/waste/([\w-]+)$", path)
+            if m and method == "DELETE":
+                store.delete_waste(m.group(1))
+                return self._ok()
+            if path == "/api/settings" and method == "PUT":
+                store.update_settings(body)
+                return self._ok()
             if path == "/api/sales" and method == "POST":
                 store.record_sales(body.get("lines", []))
                 return self._ok()

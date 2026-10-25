@@ -14,6 +14,9 @@ const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const money = (v, d = 2) => (v < 0 ? "-$" : "$") + Math.abs(v || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 const num = (v) => (Math.round((v || 0) * 100) / 100).toLocaleString();
 const pct = (v) => ((v || 0) * 100).toFixed(1) + "%";
+const me = () => S.me || null;
+const target = () => S.settings?.target_food_cost ?? 0.35;
+const allergenLine = (list) => list && list.length ? `<div class="allergens">Contains: ${list.map(esc).join(", ")}</div>` : "";
 const ingById = (id) => S.ingredients.find((i) => i.id === id);
 const itemById = (id) => S.items.find((i) => i.id === id);
 const unique = (arr) => [...new Set(arr.filter(Boolean))].sort();
@@ -70,6 +73,9 @@ function render() {
   renderProcurement();
   renderSchedule();
   renderReceiving();
+  renderSettings();
+  renderStock();
+  renderImportHistory();
   if ($("#item-dialog").open) renderBuilder();
 }
 
@@ -112,7 +118,11 @@ function renderDashboard() {
     ["Need reorder", reorder.length, money(orderCost) + " suggested", reorder.length ? "warn" : ""],
     ["Items out of stock", out.length, out.map((i) => i.name).join(", ") || "all available", out.length ? "bad" : ""],
     ["Stock value", money(value), "at landed cost"],
-    ["Avg ingredient cost", pct(avgCost), "of menu price"],
+    ["Avg ingredient cost", pct(avgCost), `target ${pct(target())}`, avgCost > target() ? "warn" : ""],
+    ...(() => {
+      const wk = (S.waste || []).filter((w) => w.at.slice(0, 10) >= mondayOf(todayIso()));
+      return [["Waste this week", money(wk.reduce((a, w) => a + w.cost, 0)), `${wk.length} entr${wk.length === 1 ? "y" : "ies"} logged`]];
+    })(),
     ...(() => {
       const due = openPOs().filter((p) => p.expected <= todayIso());
       const late = due.filter((p) => p.expected < todayIso());
@@ -135,6 +145,22 @@ function renderDashboard() {
       `</table><button class="primary" onclick="$('#tabs [data-tab=procurement]').click()">Go to procurement →</button>`
     : `<p class="ok-text">Everything is above its reorder point.</p>`;
 
+  const over = active.filter((i) => i.cost_pct > target());
+  const changes = S.price_changes || [];
+  $("#dash-prices").innerHTML = (changes.length ? `<table class="data compact"><tr><th>When</th><th>Ingredient</th><th>Cost per unit</th><th>Drinks affected</th></tr>` +
+    changes.slice(0, 8).map((c) => {
+      const up = c.new.unit_cost > c.old.unit_cost;
+      const ch = c.old.unit_cost ? c.new.unit_cost / c.old.unit_cost - 1 : 0;
+      return `<tr><td>${esc(c.at.slice(0, 10))}<div class="hint">${esc(c.source)}</div></td><td>${esc(c.ingredient)}</td>
+        <td>${money(c.old.unit_cost, 3)} → ${money(c.new.unit_cost, 3)}/${esc(c.unit)} <span class="pill ${up ? "bad" : "good"}">${up ? "+" : ""}${pct(ch)}</span></td>
+        <td>${c.items.map((i) => {
+          const a = i.price ? i.old_cost / i.price : 0, b = i.price ? i.new_cost / i.price : 0;
+          return `<div>${esc(i.name)}: ${pct(a)} → <b class="${b > target() ? "bad-text" : ""}">${pct(b)}</b></div>`;
+        }).join("") || '<span class="hint">not used in any drink</span>'}</td></tr>`;
+    }).join("") + `</table>` : `<p class="hint">No ingredient price changes in the last 30 days.</p>`) +
+    (over.length ? `<p class="bad-text">Above your ${pct(target())} food-cost target: ${over.map((i) => `${esc(i.name)} (${pct(i.cost_pct)})`).join(", ")}</p>`
+      : `<p class="ok-text">Every drink is within your ${pct(target())} food-cost target.</p>`);
+
   $("#dash-availability").innerHTML = `<table class="data compact"><tr><th></th><th>Item</th><th>Can make</th><th>Limited by</th></tr>` +
     active.map((it) => ({ it, lim: limiting(it) })).sort((a, b) => a.it.can_make - b.it.can_make)
       .map(({ it, lim }) => `<tr><td>${thumb(it, "mini")}</td><td>${esc(it.name)}</td>
@@ -155,9 +181,10 @@ function renderMenu() {
         <div class="hint">${esc(it.category)}${it.size ? " · " + esc(it.size) : ""}${it.active ? "" : " · inactive"}</div>
         <p>${esc(it.description)}</p>
         <div class="chips">${it.recipe.map((r) => `<span class="chip">${esc(ingById(r.ingredient_id)?.name)}</span>`).join("")}</div>
+        ${allergenLine(it.allergens)}
         <div class="menu-stats">
           <span>Cost ${money(it.cost)}</span><span>Margin ${money(it.margin)}</span>
-          <span class="${it.cost_pct > 0.35 ? "bad-text" : ""}">${pct(it.cost_pct)}</span>
+          <span class="${it.cost_pct > target() ? "bad-text" : ""}">${pct(it.cost_pct)}</span>
           <span class="pill ${it.can_make === 0 ? "bad" : it.can_make < 20 ? "warn" : "good"}">can make ${it.can_make}</span>
         </div>
       </div>
@@ -183,7 +210,8 @@ function renderIngredients() {
       <th class="r">On hand</th><th class="r">Reorder / Par</th><th class="r">Use / day</th><th>Status</th><th>Used in</th></tr></thead><tbody>` +
     list.map((i) => `<tr data-id="${esc(i.id)}" class="${i.status === "reorder" ? "row-bad" : ""}">
       <td class="hint">${esc(i.id)}</td><td><b>${esc(i.name)}</b></td><td>${esc(i.category)}</td><td>${esc(i.supplier)}</td>
-      <td>${esc(i.package_desc)} <span class="hint">(${num(i.package_qty)} ${esc(i.unit)})</span></td>
+      <td>${esc(i.package_desc)} <span class="hint">(${num(i.package_qty)} ${esc(i.unit)}${i.yield_pct < 100 ? `, ${num(i.yield_pct)}% usable` : ""})</span>
+        ${i.allergens.length ? `<div class="allergens">${i.allergens.map(esc).join(", ")}</div>` : ""}</td>
       <td class="r">${money(i.package_cost)}</td><td class="r">${money(i.shipping_cost)}</td>
       <td class="r">${money(i.unit_cost, 3)}/${esc(i.unit)}</td><td class="r">${i.lead_time_days}d</td>
       <td class="r">${i.shelf_life_days ? i.shelf_life_days + "d" : "–"}</td>
@@ -259,12 +287,14 @@ function updateCostBox() {
     return ing && r.qty > 0 ? Math.floor(Math.max(ing.on_hand, 0) / r.qty) : Infinity;
   })) : 0;
   const cp = price ? cost / price : 0;
+  const allergens = (S.allergen_list || []).filter((a) => it.recipe.some((r) => (ingById(r.ingredient_id)?.allergens || []).includes(a)));
   $("#cost-box").innerHTML = `
     <div><span>Ingredient cost</span><b>${money(cost)}</b></div>
     <div><span>Gross margin</span><b>${money(price - cost)}</b></div>
-    <div><span>Cost %</span><b class="${cp > 0.35 ? "bad-text" : ""}">${pct(cp)}</b></div>
+    <div><span>Cost %</span><b class="${cp > target() ? "bad-text" : ""}">${pct(cp)}</b></div>
     <div><span>Can make now</span><b>${Number.isFinite(can) ? can : "–"}</b></div>
-    ${price ? `<div class="hint">Price for 30% cost: ${money(cost / 0.3)} · 25%: ${money(cost / 0.25)}</div>` : ""}`;
+    ${cost ? `<div class="hint">Price for your ${pct(target())} target: ${money(cost / target())} · for 25%: ${money(cost / 0.25)}</div>` : ""}
+    <div class="hint">Allergens: <b>${allergens.length ? allergens.map(esc).join(", ") : "none listed"}</b></div>`;
 }
 
 function addToRecipe(ingId) {
@@ -359,19 +389,21 @@ function formItemFields() {
 $("#picker-new").addEventListener("click", () => openIng(null, { name: $("#picker-search").value, fromBuilder: true }));
 
 // ------------------------------------------------------------ ingredient editor
-const ING_NUM = ["package_qty", "package_cost", "shipping_cost", "lead_time_days", "shelf_life_days",
+const ING_NUM = ["package_qty", "yield_pct", "package_cost", "shipping_cost", "lead_time_days", "shelf_life_days",
   "min_order_packages", "on_hand", "reorder_point", "par_level"];
 const ING_TXT = ["name", "category", "unit", "supplier", "supplier_sku", "package_desc", "notes"];
 
 function openIng(ing, opts = {}) {
   editingIng = ing ? { ...ing } : {
     id: null, name: opts.name || "", category: "", unit: "oz", supplier: "", supplier_sku: "", package_desc: "",
-    package_qty: 1, package_cost: 0, shipping_cost: 0, lead_time_days: 2, shelf_life_days: 7, min_order_packages: 1,
+    package_qty: 1, yield_pct: 100, allergens: [], package_cost: 0, shipping_cost: 0, lead_time_days: 2, shelf_life_days: 7, min_order_packages: 1,
     on_hand: 0, reorder_point: 0, par_level: 0, notes: "",
   };
   editingIng.fromBuilder = !!opts.fromBuilder;
   const f = $("#ing-form");
   [...ING_NUM, ...ING_TXT].forEach((k) => (f.elements[k].value = editingIng[k] ?? ""));
+  $("#ing-allergens").innerHTML = (S.allergen_list || []).map((a) => `<label class="check"><input type="checkbox" value="${esc(a)}"
+    ${(editingIng.allergens || []).includes(a) ? "checked" : ""}> ${esc(a)}</label>`).join("");
   $("#ing-title").textContent = editingIng.id ? `Edit ${editingIng.name}` : "New ingredient";
   $("#ing-delete").hidden = !editingIng.id;
   $("#ing-used-in").innerHTML = ing && ing.used_in.length
@@ -386,8 +418,10 @@ function updateIngCalc() {
   const v = (k) => parseFloat(f[k].value) || 0;
   const unit = f.unit.value;
   $$("#ing-form .unit-tag").forEach((t) => (t.textContent = `(${unit})`));
-  const uc = v("package_qty") > 0 ? (v("package_cost") + v("shipping_cost")) / v("package_qty") : 0;
-  $("#ing-unit-cost").innerHTML = `Landed cost: <b>${money(uc, 4)} per ${esc(unit)}</b> · ${money(v("package_cost") + v("shipping_cost"))} per package`;
+  const usable = v("package_qty") * (f.yield_pct.value === "" ? 100 : v("yield_pct")) / 100;
+  const uc = usable > 0 ? (v("package_cost") + v("shipping_cost")) / usable : 0;
+  $("#ing-unit-cost").innerHTML = `Landed cost: <b>${money(uc, 4)} per usable ${esc(unit)}</b> · ${money(v("package_cost") + v("shipping_cost"))} per package` +
+    (usable && usable !== v("package_qty") ? ` · ${num(usable)} ${esc(unit)} usable per package` : "");
   const usage = editingIng && editingIng.id ? ingById(editingIng.id)?.daily_usage || 0 : 0;
   const sugg = usage ? usage * v("lead_time_days") * 1.5 : 0;
   $("#ing-reorder-hint").innerHTML = usage
@@ -404,6 +438,7 @@ $("#ing-form").addEventListener("submit", async (e) => {
   const body = { id: editingIng.id };
   ING_TXT.forEach((k) => (body[k] = f[k].value));
   ING_NUM.forEach((k) => (body[k] = f[k].value));
+  body.allergens = $$("#ing-allergens input:checked").map((x) => x.value);
   try {
     const res = await api(body.id ? "PUT" : "POST", body.id ? `/api/ingredients/${body.id}` : "/api/ingredients", body);
     $("#ing-dialog").close();
@@ -424,6 +459,7 @@ function renderSell() {
   $("#sell-buttons").innerHTML = S.items.filter((i) => i.active).map((it) => `
     <button class="sell-btn ${it.can_make === 0 ? "out" : ""}" data-id="${esc(it.id)}" ${it.can_make === 0 ? "title='Out of stock'" : ""}>
       ${thumb(it, "mini")}<span>${esc(it.name)}</span><b>${money(it.price)}</b>
+      ${it.allergens.length ? `<small class="allergens">${it.allergens.map(esc).join(", ")}</small>` : ""}
       ${ticket[it.id] ? `<i class="badge">${ticket[it.id]}</i>` : ""}</button>`).join("");
   const lines = Object.entries(ticket).filter(([, q]) => q > 0);
   let total = 0;
@@ -822,7 +858,7 @@ function selectPO(poId) {
   recvPO = po ? po.id : null;
   recvDraft = po && {
     received_by: "", received_at: nowLocal(), reference: "", package_damaged: false, wrong_items: false, notes: "", close_short: false,
-    lines: Object.fromEntries(po.lines.filter((l) => l.outstanding > 0).map((l) => [l.ingredient_id, { ok: false, good: 0, damaged: 0, note: "" }])),
+    lines: Object.fromEntries(po.lines.filter((l) => l.outstanding > 0).map((l) => [l.ingredient_id, { ok: false, good: 0, damaged: 0, note: "", invoice_cost: null }])),
   };
   renderReceiving();
 }
@@ -852,7 +888,7 @@ function renderRecvPanel() {
   }
   const staff = S.employees.filter((e) => e.active);
   const rows = po.lines.filter((l) => l.outstanding > 0).map((l) => {
-    const ing = ingById(l.ingredient_id) || { name: l.ingredient_id, unit: "", package_qty: 1, package_desc: "" };
+    const ing = ingById(l.ingredient_id) || { name: l.ingredient_id, unit: "", package_qty: 1, usable_per_package: 1, package_desc: "", package_cost: 0 };
     const d = recvDraft.lines[l.ingredient_id];
     return `<tr data-ing="${esc(l.ingredient_id)}">
       <td><b>${esc(ing.name)}</b><div class="hint">${esc(ing.package_desc || "package")} · ${num(ing.package_qty)}${ing.unit === "each" ? "" : " " + esc(ing.unit)} per package</div>
@@ -862,6 +898,8 @@ function renderRecvPanel() {
       <td><input type="number" min="0" max="${l.outstanding}" step="1" class="rl-good" value="${d.good}"></td>
       <td><input type="number" min="0" step="1" class="rl-dmg" value="${d.damaged}"></td>
       <td><input class="rl-note" placeholder="e.g. lid cracked" value="${esc(d.note)}"></td>
+      <td><input type="number" min="0" step="0.01" class="rl-price" placeholder="${num(ing.package_cost)}" value="${d.invoice_cost ?? ""}"
+        title="Price per package on the invoice. Leave blank if unchanged (${money(ing.package_cost)})."></td>
       <td class="rl-state"></td></tr>`;
   }).join("");
   $("#recv-panel").innerHTML = `
@@ -875,7 +913,7 @@ function renderRecvPanel() {
     </div>
     <button type="button" class="ghost" id="rv-all">&#10003; Everything arrived in good condition</button>
     <div class="table-wrap"><table class="data compact recv-table">
-      <tr><th>Item</th><th class="r">Expected (pkgs)</th><th class="c">All OK</th><th>Received OK</th><th>Damaged</th><th>Note</th><th></th></tr>
+      <tr><th>Item</th><th class="r">Expected (pkgs)</th><th class="c">All OK</th><th>Received OK</th><th>Damaged</th><th>Note</th><th title="Price per package on the invoice, if it changed">Invoice $/pkg</th><th></th></tr>
       ${rows}</table></div>
     <div class="recv-checks">
       <span id="rv-late"></span>
@@ -900,14 +938,16 @@ function renderRecvPanel() {
 function updateRecvSummary() {
   const po = S.purchase_orders.find((p) => p.id === recvPO);
   if (!po) return;
-  const adds = [], still = [];
+  const adds = [], still = [], prices = [];
   let anyShort = false;
   for (const l of po.lines.filter((x) => x.outstanding > 0)) {
     const d = recvDraft.lines[l.ingredient_id];
-    const ing = ingById(l.ingredient_id) || { name: l.ingredient_id, unit: "", package_qty: 1 };
+    const ing = ingById(l.ingredient_id) || { name: l.ingredient_id, unit: "", usable_per_package: 1, package_cost: 0 };
     const short = l.outstanding - d.good;
     if (short > 0) { anyShort = true; still.push(`${short} × ${ing.name}`); }
-    if (d.good) adds.push(`${esc(ing.name)} <b>+${num(d.good * ing.package_qty)} ${esc(ing.unit)}</b>`);
+    if (d.good) adds.push(`${esc(ing.name)} <b>+${num(d.good * ing.usable_per_package)} ${esc(ing.unit)}</b>`);
+    if (d.invoice_cost != null && Math.abs(d.invoice_cost - ing.package_cost) > 1e-9)
+      prices.push(`${esc(ing.name)} ${money(ing.package_cost)} → <b>${money(d.invoice_cost)}</b>`);
     const tags = [];
     if (d.good === l.outstanding && !d.damaged) tags.push(`<span class="pill good">OK</span>`);
     if (d.damaged) tags.push(`<span class="pill bad">${d.damaged} damaged</span>`);
@@ -922,6 +962,7 @@ function updateRecvSummary() {
   if (!anyShort) recvDraft.close_short = false;
   $("#rv-summary").innerHTML = (adds.length ? `Adds to stock: ${adds.join(" · ")}` : "Nothing will be added to stock yet.") +
     (anyShort ? `<div class="${recvDraft.close_short ? "bad-text" : ""}">${recvDraft.close_short ? "Closing short — not coming: " : "Still on order afterwards: "}${esc(still.join(", "))}</div>` : "") +
+    (prices.length ? `<div>Price update from invoice: ${prices.join(" · ")}</div>` : "") +
     `<div>Order will be marked <b>${!anyShort ? "received" : recvDraft.close_short ? "received (short)" : "partly received"}</b>.</div>`;
 }
 
@@ -951,6 +992,7 @@ $("#recv-panel").addEventListener("input", (e) => {
       d.ok = d.good === l.outstanding && !d.damaged;
       $(".rl-ok", row).checked = d.ok;
     } else if (t.matches(".rl-note")) d.note = t.value;
+    else if (t.matches(".rl-price")) d.invoice_cost = t.value === "" ? null : Math.max(parseFloat(t.value) || 0, 0);
   } else {
     const map = { "rv-by": "received_by", "rv-at": "received_at", "rv-ref": "reference", "rv-notes": "notes" };
     if (map[t.id]) recvDraft[map[t.id]] = t.value;
@@ -969,7 +1011,7 @@ $("#recv-panel").addEventListener("click", async (e) => {
   }
   if (e.target.id === "rv-submit") {
     if (S.employees.some((x) => x.active) && !recvDraft.received_by) return toast("Choose who received the delivery", true);
-    const lines = Object.entries(recvDraft.lines).map(([ingredient_id, d]) => ({ ingredient_id, good: d.good, damaged: d.damaged, note: d.note }));
+    const lines = Object.entries(recvDraft.lines).map(([ingredient_id, d]) => ({ ingredient_id, good: d.good, damaged: d.damaged, note: d.note, invoice_cost: d.invoice_cost ?? null }));
     if (!lines.some((l) => l.good || l.damaged) && !recvDraft.close_short) return toast("Tick the items that arrived, or log a delay instead", true);
     if (!confirm(`Submit receipt for ${po.id}? Stock will be updated.`)) return;
     try {
@@ -1007,6 +1049,271 @@ function renderRecvLog() {
         <td>${esc(empById(rc.received_by)?.name || "–")}</td><td>${tags.join(" ")}</td><td class="hint">${notes.map(esc).join("<br>")}</td></tr>`;
     }).join("") + `</table>` : `<p class="hint">No deliveries checked in yet.</p>`;
 }
+
+// ---------------------------------------------------------- counts & waste
+const countDraft = {};          // ingredient_id -> counted value (string as typed)
+let wasteKind = "ingredient";
+const staffOptions = (sel) => `<option value="">— choose —</option>` +
+  S.employees.filter((e) => e.active).map((e) => `<option value="${esc(e.id)}" ${e.id === sel ? "selected" : ""}>${esc(e.name)}</option>`).join("");
+const signed = (v, d = 2) => `<span class="${v < -1e-9 ? "neg" : v > 1e-9 ? "pos" : ""}">${v > 1e-9 ? "+" : ""}${(Math.round(v * 10 ** d) / 10 ** d).toLocaleString()}</span>`;
+const signedMoney = (v) => `<span class="${v < -0.005 ? "neg" : v > 0.005 ? "pos" : ""}">${v < 0 ? "−" : v > 0 ? "+" : ""}${money(Math.abs(v))}</span>`;
+
+function renderStock() {
+  if (!$("#ct-by").value) $("#ct-by").innerHTML = staffOptions(me()?.employee_id || "");
+  if (!$("#ws-by").value) $("#ws-by").innerHTML = staffOptions(me()?.employee_id || "");
+  if (!$("#ct-at").value) $("#ct-at").value = nowLocal();
+  const cats = unique(S.ingredients.map((i) => i.category));
+  const cur = $("#ct-category").value;
+  $("#ct-category").innerHTML = `<option value="">All categories</option>` + cats.map((c) => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
+  renderCountTable();
+  renderWasteForm();
+  renderCountReport();
+  renderWasteLog();
+}
+
+function renderCountTable() {
+  const q = $("#ct-search").value.toLowerCase(), cat = $("#ct-category").value;
+  const list = S.ingredients.filter((i) => (!cat || i.category === cat) && (!q || i.name.toLowerCase().includes(q)));
+  $("#ct-table").innerHTML = `<tr><th>Ingredient</th><th class="r">System says</th><th>Counted</th><th class="r">Variance</th><th class="r">Value</th></tr>` +
+    list.map((i) => {
+      const v = countDraft[i.id];
+      const has = v !== undefined && v !== "";
+      const diff = has ? parseFloat(v) - i.on_hand : 0;
+      return `<tr data-ing="${esc(i.id)}" class="${has ? "entered" : ""}"><td><b>${esc(i.name)}</b><div class="hint">${esc(i.category)} · 1 pkg = ${num(i.usable_per_package)} ${esc(i.unit)}</div></td>
+        <td class="r">${num(i.on_hand)} ${esc(i.unit)}</td>
+        <td><input type="number" min="0" step="any" class="ct-in" value="${has ? esc(v) : ""}"> <span class="hint">${esc(i.unit)}</span></td>
+        <td class="r ct-var">${has ? signed(diff) : ""}</td><td class="r ct-val">${has ? signedMoney(diff * i.unit_cost) : ""}</td></tr>`;
+    }).join("");
+  updateCountSummary();
+}
+
+function updateCountSummary() {
+  const entered = Object.entries(countDraft).filter(([, v]) => v !== "" && v !== undefined);
+  const value = entered.reduce((a, [id, v]) => { const i = ingById(id); return a + (i ? (parseFloat(v) - i.on_hand) * i.unit_cost : 0); }, 0);
+  $("#ct-summary").innerHTML = entered.length
+    ? `${entered.length} item${entered.length === 1 ? "" : "s"} counted · total variance ${signedMoney(value)} at cost`
+    : "No counts entered yet.";
+  $("#ct-save").textContent = entered.length ? `Save count (${entered.length})` : "Save count";
+}
+
+$("#ct-search").addEventListener("input", renderCountTable);
+$("#ct-category").addEventListener("change", renderCountTable);
+$("#ct-table").addEventListener("input", (e) => {
+  if (!e.target.matches(".ct-in")) return;
+  const row = e.target.closest("tr");
+  const i = ingById(row.dataset.ing);
+  countDraft[i.id] = e.target.value;
+  const has = e.target.value !== "";
+  const diff = has ? parseFloat(e.target.value) - i.on_hand : 0;
+  row.classList.toggle("entered", has);
+  $(".ct-var", row).innerHTML = has ? signed(diff) : "";
+  $(".ct-val", row).innerHTML = has ? signedMoney(diff * i.unit_cost) : "";
+  updateCountSummary();
+});
+$("#ct-clear").addEventListener("click", () => { Object.keys(countDraft).forEach((k) => delete countDraft[k]); renderCountTable(); });
+$("#ct-save").addEventListener("click", async () => {
+  const lines = Object.entries(countDraft).filter(([, v]) => v !== "").map(([ingredient_id, counted]) => ({ ingredient_id, counted }));
+  if (!lines.length) return toast("Enter at least one count", true);
+  if (S.employees.some((e) => e.active) && !$("#ct-by").value) return toast("Choose who did the count", true);
+  if (!confirm(`Save ${lines.length} counts? On-hand stock will be set to what you counted.`)) return;
+  try {
+    const res = await api("POST", "/api/counts", { lines, counted_by: $("#ct-by").value, at: $("#ct-at").value, notes: $("#ct-notes").value });
+    Object.keys(countDraft).forEach((k) => delete countDraft[k]);
+    $("#ct-notes").value = ""; $("#ct-at").value = nowLocal();
+    renderCountTable();
+    toast(`Count saved — variance ${money(res.saved.variance_value)}`);
+  } catch (err) { toast(err.message, true); }
+});
+
+function renderWasteForm() {
+  $$("#ws-kind button").forEach((b) => b.classList.toggle("on", b.dataset.k === wasteKind));
+  const cur = $("#ws-what").value;
+  $("#ws-what-label").firstChild.textContent = wasteKind === "item" ? "Drink " : "Ingredient ";
+  $("#ws-what").innerHTML = `<option value="">— choose —</option>` + (wasteKind === "item"
+    ? S.items.map((i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`)
+    : S.ingredients.map((i) => `<option value="${esc(i.id)}">${esc(i.name)} (${esc(i.unit)})</option>`)).join("");
+  if ([...$("#ws-what").options].some((o) => o.value === cur)) $("#ws-what").value = cur;
+  if (!$("#ws-reason").options.length) $("#ws-reason").innerHTML = (S.waste_reasons || []).map((r) => `<option>${esc(r)}</option>`).join("");
+  updateWasteCost();
+}
+function updateWasteCost() {
+  const id = $("#ws-what").value, qty = parseFloat($("#ws-qty").value) || 0;
+  const thing = wasteKind === "item" ? itemById(id) : ingById(id);
+  $("#ws-qty-label").textContent = wasteKind === "item" ? "Drinks" : `Quantity${thing ? ` (${thing.unit})` : ""}`;
+  $("#ws-cost").innerHTML = thing && qty ? `Cost of this waste: <b>${money(qty * (wasteKind === "item" ? thing.cost : thing.unit_cost))}</b>` : "Pick what was wasted and how much.";
+}
+$("#ws-kind").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-k]");
+  if (!b) return;
+  wasteKind = b.dataset.k;
+  $("#ws-what").value = "";
+  if (wasteKind === "item") $("#ws-reason").value = "remade drink";
+  renderWasteForm();
+});
+["#ws-what", "#ws-qty"].forEach((s) => $(s).addEventListener("input", updateWasteCost));
+$("#ws-save").addEventListener("click", async () => {
+  const body = { kind: wasteKind, qty: $("#ws-qty").value, reason: $("#ws-reason").value, note: $("#ws-note").value, by: $("#ws-by").value };
+  body[wasteKind === "item" ? "item_id" : "ingredient_id"] = $("#ws-what").value;
+  try {
+    const res = await api("POST", "/api/waste", body);
+    $("#ws-qty").value = ""; $("#ws-note").value = "";
+    toast(`Logged ${res.saved.name} — ${money(res.saved.cost)}`);
+  } catch (err) { toast(err.message, true); }
+});
+
+function renderCountReport() {
+  const counts = S.counts || [];
+  $("#ct-report").innerHTML = counts.length ? counts.map((c) => {
+    const lines = [...c.lines].sort((a, b) => a.variance * a.unit_cost - b.variance * b.unit_cost);
+    return `<details ${c === counts[0] ? "open" : ""}><summary><b>${esc(c.at.replace("T", " "))}</b> · ${esc(empById(c.counted_by)?.name || "–")} ·
+      ${c.lines.length} items · variance ${signedMoney(c.variance_value)}${c.notes ? ` · <span class="hint">${esc(c.notes)}</span>` : ""}</summary>
+      <table class="data compact"><tr><th>Ingredient</th><th class="r">Expected</th><th class="r">Counted</th><th class="r">Variance</th><th class="r">Value</th><th class="r">% of usage</th></tr>
+      ${lines.map((l) => {
+        const ing = ingById(l.ingredient_id) || { name: l.ingredient_id, unit: "" };
+        const share = l.theoretical_usage ? -l.variance / l.theoretical_usage : null;
+        return `<tr><td>${esc(ing.name)}</td><td class="r">${num(l.expected)} ${esc(ing.unit)}</td><td class="r">${num(l.counted)}</td>
+          <td class="r">${signed(l.variance)}</td><td class="r">${signedMoney(l.variance * l.unit_cost)}</td>
+          <td class="r">${share === null ? "–" : `<span class="${share > 0.05 ? "neg" : ""}">${share > 0 ? "" : "+"}${pct(Math.abs(share))}${share > 0 ? " missing" : " extra"}</span>`}</td></tr>`;
+      }).join("")}</table></details>`;
+  }).join("") : `<p class="hint">No counts yet. Count a few high-value items (fruit, protein, cups) weekly to start.</p>`;
+}
+
+function renderWasteLog() {
+  const all = S.waste || [];
+  const weekStartIso = mondayOf(todayIso());
+  const week = all.filter((w) => w.at.slice(0, 10) >= weekStartIso);
+  const byReason = {};
+  week.forEach((w) => (byReason[w.reason] = (byReason[w.reason] || 0) + w.cost));
+  const total = week.reduce((a, w) => a + w.cost, 0);
+  const max = Math.max(...Object.values(byReason), 0.01);
+  $("#ws-summary").innerHTML = week.length
+    ? `<div class="kpi-v">${money(total)}</div><div class="hint">${week.length} entries since Monday</div>` +
+      Object.entries(byReason).sort((a, b) => b[1] - a[1]).map(([r, v]) =>
+        `<div class="bar-row"><span>${esc(r)}</span><div class="bar" style="width:${(v / max) * 100}%"></div><b>${money(v)}</b></div>`).join("")
+    : `<p class="hint">Nothing logged this week.</p>`;
+  $("#ws-log").innerHTML = all.length ? `<table class="data compact"><tr><th>When</th><th>What</th><th class="r">Qty</th><th>Reason</th><th>By</th><th class="r">Cost</th><th>Note</th><th></th></tr>` +
+    all.slice(0, 40).map((w) => `<tr><td>${esc(w.at.replace("T", " "))}</td><td>${esc(w.name)}${w.kind === "item" ? ' <span class="pill">drink</span>' : ""}</td>
+      <td class="r">${num(w.qty)} ${esc(w.kind === "item" ? "" : w.unit || "")}</td><td>${esc(w.reason)}</td><td>${esc(empById(w.by)?.name || "–")}</td>
+      <td class="r">${money(w.cost)}</td><td class="hint">${esc(w.note)}</td>
+      <td><button class="ghost small" data-unwaste="${esc(w.id)}" title="Remove this entry and put the stock back">Remove</button></td></tr>`).join("") + `</table>`
+    : `<p class="hint">No waste logged yet.</p>`;
+}
+$("#ws-log").addEventListener("click", async (e) => {
+  const id = e.target.dataset.unwaste;
+  if (!id || !confirm("Remove this waste entry and put the stock back?")) return;
+  try { await api("DELETE", `/api/waste/${id}`); toast("Waste entry removed"); } catch (err) { toast(err.message, true); }
+});
+
+// ------------------------------------------------------------- sales import
+const IMP_FIELDS = [["date", "Date"], ["time", "Time"], ["item", "Item name"], ["size", "Size / variation"], ["qty", "Quantity"], ["type", "Payment / refund type"]];
+let imp = null;  // { text, filename, preview, mapping, aliases }
+
+async function previewImport() {
+  try {
+    const res = await fetch("/api/sales-import/preview", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Requested-With": "app" },
+      body: JSON.stringify({ csv: imp.text, mapping: imp.mapping, aliases: imp.aliases }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    imp.preview = data;
+    imp.mapping = data.mapping;
+    renderImport();
+  } catch (err) { toast(err.message, true); }
+}
+
+function renderImport() {
+  const box = $("#imp-preview");
+  if (!imp || !imp.preview) { box.innerHTML = ""; return; }
+  const p = imp.preview;
+  const opts = (sel) => `<option value="">(none)</option>` + p.headers.map((h) => `<option ${h === sel ? "selected" : ""}>${esc(h)}</option>`).join("");
+  const itemOpts = (sel) => `<option value="">— choose a menu item —</option>` +
+    S.items.map((i) => `<option value="${esc(i.id)}" ${i.id === sel ? "selected" : ""}>${esc(i.name)}${i.size ? ` (${esc(i.size)})` : ""}</option>`).join("") +
+    `<option value="__ignore__" ${sel === "__ignore__" ? "selected" : ""}>Ignore — not a drink (gift card, merch…)</option>`;
+  const unmatched = p.groups.filter((g) => !g.item_id).length;
+  const drinks = p.groups.filter((g) => g.item_id && g.item_id !== "__ignore__").reduce((a, g) => a + g.qty, 0);
+  const skipped = Object.entries(p.skipped).map(([why, n]) => `${n} ${esc(why)}`).join(", ");
+  box.innerHTML = `
+    <h3>${esc(imp.filename)} <span class="hint">· ${p.rows} rows${p.first ? ` · ${esc(p.first)}${p.last !== p.first ? ` to ${esc(p.last)}` : ""}` : ""}</span></h3>
+    ${p.already_imported ? `<div class="warn-line">This exact file was already imported on ${esc(p.already_imported.at.slice(0, 10))} (${esc(p.already_imported.id)}). Importing again would count those sales twice.</div>` : ""}
+    <div class="imp-map">${IMP_FIELDS.map(([f, label]) => `<label>${label}${["date", "item", "qty"].includes(f) ? " *" : ""}
+      <select data-map="${f}">${opts(p.mapping[f])}</select></label>`).join("")}</div>
+    ${p.missing.length ? `<div class="warn-line">Choose the column for: ${p.missing.map(esc).join(", ")}</div>` : `
+    <table class="data compact"><tr><th>Name in your till system</th><th class="r">Rows</th><th class="r">Sold</th><th>Counts as</th><th></th></tr>
+      ${p.groups.map((g) => `<tr class="${g.item_id ? "" : "row-bad"}"><td><b>${esc(g.pos_name)}</b></td><td class="r">${g.rows}</td><td class="r">${num(g.qty)}</td>
+        <td><select data-alias="${esc(g.pos_name)}">${itemOpts(g.item_id)}</select></td>
+        <td class="hint">${esc(g.matched_by || (g.item_id ? "" : "needs a match"))}</td></tr>`).join("")}
+    </table>
+    <div class="calc">${num(drinks)} drinks will be recorded${skipped ? ` · skipped: ${skipped}` : ""}.
+      ${unmatched ? `<b class="bad-text">${unmatched} name${unmatched === 1 ? "" : "s"} still need a match or "Ignore".</b>` : "Your matches are remembered for next time."}</div>
+    <div class="row-gap">
+      <button class="primary" id="imp-go" ${unmatched ? "disabled" : ""}>Import ${num(drinks)} drinks</button>
+      <button class="ghost" id="imp-cancel">Cancel</button>
+    </div>`}`;
+}
+
+function renderImportHistory() {
+  const list = S.imports || [];
+  $("#imp-history").innerHTML = list.length ? `<table class="data compact"><tr><th>Imported</th><th>File</th><th>Sales dates</th><th class="r">Drinks</th><th>Skipped</th><th></th></tr>` +
+    list.map((i) => `<tr class="${i.undone ? "muted" : ""}"><td>${esc(i.at.replace("T", " "))}</td><td>${esc(i.filename || i.id)}</td>
+      <td>${esc(i.first || "")}${i.last && i.last !== i.first ? ` to ${esc(i.last)}` : ""}</td><td class="r">${num(i.drinks)}</td>
+      <td class="hint">${Object.entries(i.skipped || {}).map(([w, n]) => `${n} ${esc(w)}`).join(", ") || "–"}</td>
+      <td>${i.undone ? `<span class="pill">undone</span>` : `<button class="ghost small" data-undo="${esc(i.id)}">Undo</button>`}</td></tr>`).join("") + `</table>`
+    : `<p class="hint">No imports yet.</p>`;
+}
+
+$("#imp-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  imp = { text: await file.text(), filename: file.name, mapping: null, aliases: {}, preview: null };
+  previewImport();
+});
+$("#imp-preview").addEventListener("change", (e) => {
+  if (e.target.dataset.map) {
+    imp.mapping = { ...imp.mapping, [e.target.dataset.map]: e.target.value };
+    if (!e.target.value) delete imp.mapping[e.target.dataset.map];
+    previewImport();
+  }
+  if (e.target.dataset.alias !== undefined) {
+    imp.aliases[e.target.dataset.alias] = e.target.value;
+    previewImport();
+  }
+});
+$("#imp-preview").addEventListener("click", async (e) => {
+  if (e.target.id === "imp-cancel") { imp = null; $("#imp-file").value = ""; renderImport(); }
+  if (e.target.id === "imp-go") {
+    const again = imp.preview.already_imported;
+    if (again && !confirm("This file was imported before. Import it again anyway? Sales would be counted twice.")) return;
+    try {
+      const res = await api("POST", "/api/sales-import", { csv: imp.text, mapping: imp.mapping, aliases: imp.aliases, filename: imp.filename, force: !!again });
+      toast(`Imported ${num(res.imported.drinks)} drinks — stock updated`);
+      imp = null; $("#imp-file").value = ""; renderImport();
+    } catch (err) { toast(err.message, true); }
+  }
+});
+$("#imp-history").addEventListener("click", async (e) => {
+  const id = e.target.dataset.undo;
+  if (!id || !confirm(`Undo import ${id}? Its sales are removed and their ingredients put back in stock.`)) return;
+  try { await api("POST", `/api/sales-import/${id}/undo`); toast(`${id} undone`); } catch (err) { toast(err.message, true); }
+});
+
+// ---------------------------------------------------------------- settings
+function renderSettings() {
+  const f = $("#settings-form");
+  if (!f.contains(document.activeElement)) {
+    f.elements.business_name.value = S.settings?.business_name || "";
+    f.elements.target_food_cost.value = +(target() * 100).toFixed(1);
+  }
+  $(".brand-name").textContent = S.settings?.business_name || "Menu & Inventory";
+}
+$("#settings-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target.elements;
+  try {
+    await api("PUT", "/api/settings", { business_name: f.business_name.value, target_food_cost: f.target_food_cost.value });
+    toast("Settings saved");
+  } catch (err) { toast(err.message, true); }
+});
 
 // ------------------------------------------------------------------ excel
 $("#import-upload").addEventListener("click", async () => {

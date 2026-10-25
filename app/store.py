@@ -23,6 +23,14 @@ DATA_DIR = os.path.join(ROOT, "data")
 DATA_FILE = os.path.join(DATA_DIR, "catalog.json")
 IMAGE_DIR = os.path.join(DATA_DIR, "images")
 
+# The nine major food allergens (US FDA).
+ALLERGENS = ["milk", "eggs", "fish", "shellfish", "tree nuts", "peanuts", "wheat", "soy", "sesame"]
+
+WASTE_REASONS = ["expired / spoiled", "spilled / dropped", "damaged", "remade drink", "staff drink",
+                 "free / comped drink", "prep trim", "other"]
+
+DEFAULT_SETTINGS = {"business_name": "", "target_food_cost": 0.35}
+
 UNITS = ["oz", "fl oz", "g", "kg", "lb", "ml", "l", "each", "scoop", "tbsp", "tsp", "cup"]
 
 INGREDIENT_FIELDS = {
@@ -34,6 +42,7 @@ INGREDIENT_FIELDS = {
     "supplier_sku": (str, ""),
     "package_desc": (str, ""),
     "package_qty": (float, 1.0),
+    "yield_pct": (float, 100.0),
     "package_cost": (float, 0.0),
     "shipping_cost": (float, 0.0),
     "lead_time_days": (int, 0),
@@ -71,6 +80,7 @@ EMPLOYEE_COLORS = ["#2f7d5b", "#3e7cb1", "#b7791f", "#8e44ad", "#c0392b", "#16a0
                    "#7f8c2d", "#e84393"]
 
 USAGE_WINDOW_DAYS = 14
+PRICE_ALERT_DAYS = 30
 
 # "partial" = some of the order has arrived and the rest is still expected.
 OPEN_PO_STATUSES = ("open", "partial")
@@ -100,7 +110,20 @@ def _next_id(prefix, existing):
 
 
 def empty_catalog():
-    return {"ingredients": [], "items": [], "sales": [], "purchase_orders": [], "employees": [], "shifts": []}
+    return {"settings": dict(DEFAULT_SETTINGS), "ingredients": [], "items": [], "sales": [], "purchase_orders": [],
+            "employees": [], "shifts": [], "price_changes": [], "pos_aliases": {}, "imports": [],
+            "counts": [], "waste": []}
+
+
+def clean_allergens(value):
+    """Accept a list or a comma-separated string; keep only known allergens, in standard order."""
+    if isinstance(value, str):
+        value = [v for v in re.split(r"[,;/]", value)]
+    found = {str(v).strip().lower() for v in (value or []) if str(v).strip()}
+    unknown = found - set(ALLERGENS)
+    if unknown:
+        raise ValidationError(f"Unknown allergen(s): {', '.join(sorted(unknown))}. Use: {', '.join(ALLERGENS)}")
+    return [a for a in ALLERGENS if a in found]
 
 
 def _clean_time(value, label):
@@ -145,6 +168,11 @@ class Store:
             data = json.load(f)
         for key, val in empty_catalog().items():
             data.setdefault(key, val)
+        for key, val in DEFAULT_SETTINGS.items():
+            data["settings"].setdefault(key, val)
+        for ing in data["ingredients"]:  # files saved before these fields existed
+            ing.setdefault("yield_pct", 100.0)
+            ing.setdefault("allergens", [])
         return data
 
     def save(self):
@@ -176,11 +204,22 @@ class Store:
 
     # --------------------------------------------------------- calculations
     @staticmethod
-    def unit_cost(ing):
-        qty = ing.get("package_qty") or 0
-        if qty <= 0:
+    def usable_per_package(ing):
+        """Recipe units a package really yields after trimming, peeling, coring..."""
+        return (ing.get("package_qty") or 0) * (ing.get("yield_pct", 100) or 0) / 100
+
+    @classmethod
+    def unit_cost(cls, ing):
+        usable = cls.usable_per_package(ing)
+        if usable <= 0:
             return 0.0
-        return (ing.get("package_cost", 0) + ing.get("shipping_cost", 0)) / qty
+        return (ing.get("package_cost", 0) + ing.get("shipping_cost", 0)) / usable
+
+    def item_allergens(self, item):
+        found = set()
+        for line in item.get("recipe", []):
+            found.update((self.ingredient(line["ingredient_id"]) or {}).get("allergens", []))
+        return [a for a in ALLERGENS if a in found]
 
     def item_cost(self, item):
         total = 0.0
@@ -222,12 +261,12 @@ class Store:
                 used[line["ingredient_id"]] = used.get(line["ingredient_id"], 0) + line["qty"] * sale["qty"]
         return used
 
-    @staticmethod
-    def suggested_packages(ing):
+    @classmethod
+    def suggested_packages(cls, ing):
         """Packages to order: refill to par once stock hits the reorder point."""
         if ing["on_hand"] > ing["reorder_point"]:
             return 0
-        pkg = ing["package_qty"] or 1
+        pkg = cls.usable_per_package(ing) or 1
         need = max(ing["par_level"] - ing["on_hand"], 0)
         return max(ing.get("min_order_packages") or 1, math.ceil(need / pkg))
 
@@ -261,7 +300,7 @@ class Store:
             for ing_id, pkgs in self.outstanding(po).items():
                 ing = self.ingredient(ing_id)
                 if ing:
-                    qty[ing_id] = qty.get(ing_id, 0) + pkgs * ing["package_qty"]
+                    qty[ing_id] = qty.get(ing_id, 0) + pkgs * self.usable_per_package(ing)
         return qty
 
     def po_view(self, po):
@@ -292,6 +331,7 @@ class Store:
                 ingredients.append({
                     **ing,
                     "unit_cost": self.unit_cost(ing),
+                    "usable_per_package": self.usable_per_package(ing),
                     "stock_value": ing["on_hand"] * self.unit_cost(ing),
                     "status": "reorder" if ing["on_hand"] <= ing["reorder_point"] else "ok",
                     "suggested_packages": self.suggested_packages(ing),
@@ -310,6 +350,7 @@ class Store:
                     "margin": it["price"] - cost,
                     "cost_pct": (cost / it["price"]) if it["price"] else 0,
                     "can_make": self.can_make(it),
+                    "allergens": self.item_allergens(it),
                     "units_sold": sold,
                 })
             revenue_by_date = {}
@@ -318,9 +359,17 @@ class Store:
                 if it:
                     d = sale["date"][:10]
                     revenue_by_date[d] = revenue_by_date.get(d, 0) + it["price"] * sale["qty"]
+            cutoff = (date.today() - timedelta(days=PRICE_ALERT_DAYS)).isoformat()
             return {
+                "settings": self.data["settings"],
                 "ingredients": ingredients,
                 "items": items,
+                "price_changes": [c for c in self.data["price_changes"] if c["at"][:10] >= cutoff][::-1],
+                "imports": self.data["imports"][-20:][::-1],
+                "counts": self.data["counts"][-12:][::-1],
+                "waste": self.data["waste"][-100:][::-1],
+                "waste_reasons": WASTE_REASONS,
+                "allergen_list": ALLERGENS,
                 "employees": self.data["employees"],
                 "shifts": [{**s, "hours": shift_hours(s)} for s in self.data["shifts"]],
                 "revenue_by_date": revenue_by_date,
@@ -342,11 +391,14 @@ class Store:
             raise ValidationError("Name is required")
         return out
 
-    def upsert_ingredient(self, payload):
+    def upsert_ingredient(self, payload, source="edited by hand"):
         with self.lock:
             clean = self._clean(payload, INGREDIENT_FIELDS)
+            clean["allergens"] = clean_allergens(payload.get("allergens"))
             if clean["package_qty"] <= 0:
                 raise ValidationError("Quantity per package must be greater than 0")
+            if not 0 < clean["yield_pct"] <= 100:
+                raise ValidationError("Usable yield must be between 1 and 100%")
             ing_id = payload.get("id")
             existing = self.ingredient(ing_id) if ing_id else None
             dup = next((i for i in self.data["ingredients"]
@@ -354,11 +406,55 @@ class Store:
             if dup:
                 raise ValidationError(f"An ingredient named '{clean['name']}' already exists ({dup['id']})")
             if existing:
+                before = dict(existing)
                 existing.update(clean)
+                self._record_price_change(before, existing, source)
                 return existing
             new = {"id": ing_id or _next_id("ING", [i["id"] for i in self.data["ingredients"]]), **clean}
             self.data["ingredients"].append(new)
             return new
+
+    def _record_price_change(self, before, after, source):
+        """Log a change in an ingredient's landed unit cost and what it does to each drink's food cost."""
+        old_uc, new_uc = self.unit_cost(before), self.unit_cost(after)
+        if abs(new_uc - old_uc) < 1e-9:
+            return None
+        items = []
+        for it in self.data["items"]:
+            line = next((l for l in it.get("recipe", []) if l["ingredient_id"] == after["id"]), None)
+            if not line:
+                continue
+            new_cost = self.item_cost(it)
+            old_cost = new_cost - line["qty"] * (new_uc - old_uc)
+            items.append({"id": it["id"], "name": it["name"], "price": it["price"],
+                          "old_cost": round(old_cost, 4), "new_cost": round(new_cost, 4)})
+        change = {
+            "id": _next_id("PC", [c["id"] for c in self.data["price_changes"]]),
+            "at": datetime.now().isoformat(timespec="minutes"),
+            "ingredient_id": after["id"], "ingredient": after["name"], "unit": after.get("unit", ""),
+            "source": source,
+            "old": {"package_cost": before.get("package_cost", 0), "shipping_cost": before.get("shipping_cost", 0),
+                    "unit_cost": round(old_uc, 5)},
+            "new": {"package_cost": after.get("package_cost", 0), "shipping_cost": after.get("shipping_cost", 0),
+                    "unit_cost": round(new_uc, 5)},
+            "items": items,
+        }
+        self.data["price_changes"].append(change)
+        return change
+
+    def update_settings(self, payload):
+        with self.lock:
+            st = self.data["settings"]
+            if "business_name" in payload:
+                st["business_name"] = _coerce(payload.get("business_name"), str, "")
+            if "target_food_cost" in payload:
+                t = _coerce(payload.get("target_food_cost"), float, DEFAULT_SETTINGS["target_food_cost"])
+                if t > 1:  # typed as a percentage
+                    t = t / 100
+                if not 0.05 <= t <= 0.9:
+                    raise ValidationError("Target food cost should be between 5% and 90%")
+                st["target_food_cost"] = round(t, 4)
+            return st
 
     def delete_ingredient(self, ing_id):
         with self.lock:
@@ -397,21 +493,149 @@ class Store:
         with self.lock:
             self.data["items"] = [i for i in self.data["items"] if i["id"] != item_id]
 
-    def record_sales(self, lines, when=None):
-        """Sell menu items: logs the sale and deducts every ingredient in the recipe."""
+    def record_sales(self, lines, when=None, batch=None):
+        """Sell menu items: logs the sale and deducts every ingredient in the recipe.
+
+        Each line may carry its own "date" (used by the POS import); otherwise `when` / now.
+        Everything is validated before any stock moves.
+        """
         when = when or datetime.now().isoformat(timespec="seconds")
         with self.lock:
+            clean = []
             for line in lines:
                 item = self.item(line.get("item_id"))
-                qty = _coerce(line.get("qty"), int, 0)
                 if not item:
                     raise ValidationError(f"Unknown menu item '{line.get('item_id')}'")
-                if qty <= 0:
+                qty = _coerce(line.get("qty"), int, 0)
+                if qty > 0:
+                    clean.append((item, qty, line.get("date") or when))
+            for item, qty, at in clean:
+                self._apply_recipe(item, -qty)
+                sale = {"date": at, "item_id": item["id"], "qty": qty}
+                if batch:
+                    sale["batch"] = batch
+                self.data["sales"].append(sale)
+            return len(clean)
+
+    def _apply_recipe(self, item, qty):
+        """Move stock for `qty` servings of an item (negative = used up)."""
+        for r in item["recipe"]:
+            ing = self.ingredient(r["ingredient_id"])
+            if ing:
+                ing["on_hand"] = round(ing["on_hand"] + r["qty"] * qty, 4)
+
+    # ------------------------------------------------- counts and waste
+    def theoretical_usage(self, ing_id, since, until):
+        """What sales and logged waste say was used of an ingredient between two times."""
+        used = 0.0
+        for sale in self.data["sales"]:
+            if since < sale["date"] <= until:
+                item = self.item(sale["item_id"])
+                for r in (item or {}).get("recipe", []):
+                    if r["ingredient_id"] == ing_id:
+                        used += r["qty"] * sale["qty"]
+        for w in self.data["waste"]:
+            if since < w["at"] <= until:
+                if w["kind"] == "ingredient" and w["ingredient_id"] == ing_id:
+                    used += w["qty"]
+                elif w["kind"] == "item":
+                    item = self.item(w["item_id"])
+                    for r in (item or {}).get("recipe", []):
+                        if r["ingredient_id"] == ing_id:
+                            used += r["qty"] * w["qty"]
+        return used
+
+    def _clean_when(self, value):
+        try:
+            return datetime.fromisoformat(str(value)).isoformat(timespec="minutes") if value else \
+                datetime.now().isoformat(timespec="minutes")
+        except ValueError:
+            raise ValidationError("Time must look like 2026-10-25T09:30")
+
+    def _clean_by(self, emp_id):
+        if emp_id and not self.employee(emp_id):
+            raise ValidationError(f"Unknown employee '{emp_id}'")
+        return emp_id or ""
+
+    def record_count(self, payload):
+        """Physical stock count: on-hand becomes what was counted; the difference is the variance
+        (stock that left without a sale or a waste entry: over-portioning, unlogged waste, theft, errors)."""
+        with self.lock:
+            when = self._clean_when(payload.get("at"))
+            by = self._clean_by(payload.get("counted_by"))
+            lines = []
+            for line in payload.get("lines", []):
+                if line.get("counted") in (None, ""):
                     continue
-                for r in item["recipe"]:
-                    ing = self.ingredient(r["ingredient_id"])
-                    ing["on_hand"] = round(ing["on_hand"] - r["qty"] * qty, 4)
-                self.data["sales"].append({"date": when, "item_id": item["id"], "qty": qty})
+                ing = self.ingredient(line.get("ingredient_id"))
+                if not ing:
+                    raise ValidationError(f"Unknown ingredient '{line.get('ingredient_id')}'")
+                counted = _coerce(line.get("counted"), float, 0.0)
+                if counted < 0:
+                    raise ValidationError(f"{ing['name']}: count can't be negative")
+                prev = max((c["at"] for c in self.data["counts"]
+                            for l in c["lines"] if l["ingredient_id"] == ing["id"] and c["at"] < when),
+                           default=(datetime.fromisoformat(when) - timedelta(days=USAGE_WINDOW_DAYS)).isoformat(timespec="minutes"))
+                lines.append({
+                    "ingredient_id": ing["id"], "expected": round(ing["on_hand"], 4), "counted": counted,
+                    "variance": round(counted - ing["on_hand"], 4), "unit_cost": round(self.unit_cost(ing), 5),
+                    "usage_since": prev, "theoretical_usage": round(self.theoretical_usage(ing["id"], prev, when), 4),
+                })
+            if not lines:
+                raise ValidationError("Enter at least one counted quantity")
+            for line in lines:
+                self.ingredient(line["ingredient_id"])["on_hand"] = line["counted"]
+            count = {"id": _next_id("CT", [c["id"] for c in self.data["counts"]]), "at": when, "counted_by": by,
+                     "notes": _coerce(payload.get("notes"), str, ""), "lines": lines,
+                     "variance_value": round(sum(l["variance"] * l["unit_cost"] for l in lines), 2)}
+            self.data["counts"].append(count)
+            return count
+
+    def record_waste(self, payload):
+        """Log something thrown away: an ingredient quantity, or whole drinks (deducts their recipe)."""
+        with self.lock:
+            kind = payload.get("kind") or ("item" if payload.get("item_id") else "ingredient")
+            reason = _coerce(payload.get("reason"), str, "")
+            if reason not in WASTE_REASONS:
+                raise ValidationError(f"Reason must be one of: {', '.join(WASTE_REASONS)}")
+            qty = _coerce(payload.get("qty"), float, 0.0)
+            if qty <= 0:
+                raise ValidationError("Quantity must be more than 0")
+            entry = {"id": _next_id("WS", [w["id"] for w in self.data["waste"]]),
+                     "at": self._clean_when(payload.get("at")), "by": self._clean_by(payload.get("by")),
+                     "kind": kind, "qty": qty, "reason": reason, "note": _coerce(payload.get("note"), str, "")}
+            if kind == "item":
+                item = self.item(payload.get("item_id"))
+                if not item:
+                    raise ValidationError("Choose the drink that was thrown away")
+                if qty != int(qty):
+                    raise ValidationError("Drinks must be a whole number")
+                entry.update(item_id=item["id"], name=item["name"], cost=round(self.item_cost(item) * qty, 2))
+                self._apply_recipe(item, -qty)
+            elif kind == "ingredient":
+                ing = self.ingredient(payload.get("ingredient_id"))
+                if not ing:
+                    raise ValidationError("Choose the ingredient that was thrown away")
+                entry.update(ingredient_id=ing["id"], name=ing["name"], unit=ing["unit"],
+                             cost=round(self.unit_cost(ing) * qty, 2))
+                ing["on_hand"] = round(ing["on_hand"] - qty, 4)
+            else:
+                raise ValidationError("Waste kind must be 'ingredient' or 'item'")
+            self.data["waste"].append(entry)
+            return entry
+
+    def delete_waste(self, waste_id):
+        """Remove a mistaken waste entry and put the stock back."""
+        with self.lock:
+            entry = next((w for w in self.data["waste"] if w["id"] == waste_id), None)
+            if not entry:
+                raise ValidationError("Waste entry not found")
+            if entry["kind"] == "item" and self.item(entry["item_id"]):
+                self._apply_recipe(self.item(entry["item_id"]), entry["qty"])
+            elif entry["kind"] == "ingredient" and self.ingredient(entry["ingredient_id"]):
+                ing = self.ingredient(entry["ingredient_id"])
+                ing["on_hand"] = round(ing["on_hand"] + entry["qty"], 4)
+            self.data["waste"] = [w for w in self.data["waste"] if w["id"] != waste_id]
 
     def create_purchase_order(self, supplier, lines):
         with self.lock:
@@ -476,8 +700,12 @@ class Store:
                 if good > expected:
                     name = self.ingredient(ing_id)["name"] if self.ingredient(ing_id) else ing_id
                     raise ValidationError(f"{name}: {good} good packages entered but only {expected} outstanding")
+                invoice_cost = src.get("invoice_cost")
+                invoice_cost = None if invoice_cost in (None, "") else _coerce(invoice_cost, float, 0.0)
+                if invoice_cost is not None and invoice_cost < 0:
+                    raise ValidationError("Invoice price can't be negative")
                 lines.append({"ingredient_id": ing_id, "expected": expected, "good": good, "damaged": damaged,
-                              "note": _coerce(src.get("note"), str, "")})
+                              "note": _coerce(src.get("note"), str, ""), "invoice_cost": invoice_cost})
             close_short = bool(payload.get("close_short"))
             if not any(l["good"] or l["damaged"] for l in lines) and not close_short:
                 raise ValidationError("Enter what arrived, or tick 'nothing else is coming' to close the order")
@@ -504,7 +732,11 @@ class Store:
             for line in lines:
                 ing = self.ingredient(line["ingredient_id"])
                 if ing and line["good"]:
-                    ing["on_hand"] = round(ing["on_hand"] + line["good"] * ing["package_qty"], 4)
+                    ing["on_hand"] = round(ing["on_hand"] + line["good"] * self.usable_per_package(ing), 4)
+                if ing and line.get("invoice_cost") is not None and abs(line["invoice_cost"] - ing["package_cost"]) > 1e-9:
+                    before = dict(ing)
+                    ing["package_cost"] = line["invoice_cost"]
+                    self._record_price_change(before, ing, f"invoice on {po_id}")
             po.setdefault("receipts", []).append(receipt)
             short = any(l["good"] < l["expected"] for l in lines)
             if not short:
@@ -638,3 +870,7 @@ class Store:
             except Exception:
                 self.data["ingredients"], self.data["items"] = backup
                 raise
+            old = {i["id"]: i for i in backup[0]}
+            for ing in self.data["ingredients"]:
+                if ing["id"] in old:
+                    self._record_price_change(old[ing["id"]], ing, "Excel import")

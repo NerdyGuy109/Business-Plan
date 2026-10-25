@@ -21,7 +21,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from .store import ROOT, UNITS, Store, week_start
+from .store import ALLERGENS, ROOT, UNITS, Store, week_start
 
 EXPORT_PATH = os.path.join(ROOT, "exports", "inventory.xlsx")
 
@@ -54,6 +54,7 @@ ING_COLS = [
     ("Supplier SKU", "supplier_sku", "in", 13, None),
     ("Package Description", "package_desc", "in", 20, None),
     ("Qty per Package (units)", "package_qty", "in", 12, QTY),
+    ("Usable Yield (%)", "yield_pct", "in", 9, "0"),
     ("Package Cost ($)", "package_cost", "in", 11, MONEY),
     ("Shipping per Package ($)", "shipping_cost", "in", 11, MONEY),
     ("Landed Unit Cost ($)", None, "f", 12, MONEY4),
@@ -69,6 +70,7 @@ ING_COLS = [
     ("Suggested Order (pkgs)", None, "f", 11, "0"),
     ("Order Cost ($)", None, "f", 11, MONEY),
     ("Stock Value ($)", None, "f", 11, MONEY),
+    ("Allergens", "allergens", "in", 16, None),
     ("Notes", "notes", "in", 30, None),
 ]
 ITEM_COLS = [
@@ -80,6 +82,7 @@ ITEM_COLS = [
     ("Description", "description", "in", 44, None),
     ("Image File", "image", "in", 18, None),
     ("Active", "active", "in", 8, None),
+    ("Allergens", None, "f", 20, None),
     ("# Ingredients", None, "f", 10, "0"),
     ("Ingredient Cost ($)", None, "f", 12, MONEY),
     ("Gross Margin ($)", None, "f", 12, MONEY),
@@ -165,6 +168,10 @@ def export_workbook(store: Store, path=EXPORT_PATH):
         ("Procurement", "Reorder list grouped by supplier. Rows flagged REORDER should be purchased."),
         ("Purchase Orders", "Orders created from the website with what has been received, damaged and is still outstanding."),
         ("Receiving Log", "Every delivery checked in on the website: who, when, what arrived, damage, shortages and notes."),
+        ("Price Changes", "Every change to an ingredient's cost and how it moved the food cost of the drinks using it."),
+        ("Stock Counts", "Physical counts against what the system expected. Negative variance = stock that left without "
+                         "a sale or waste entry."),
+        ("Waste Log", "Everything logged as thrown away, spilled, remade or given away, with its cost."),
         ("Sales Log", "Sales recorded on the website; feeds 'Units Used' and 'Units Sold'."),
         ("Staff", "Employees with role, hourly rate and maximum hours per week."),
         ("Schedule", "Every shift: date, employee, start/end, hours and labor cost. OPEN = not yet assigned."),
@@ -173,6 +180,11 @@ def export_workbook(store: Store, path=EXPORT_PATH):
         ("", ""),
         ("Colour legend", "Blue header / blue text = input you can edit.  Dark green header = calculated, "
                           "do not overwrite.  Green text = pulled from another sheet."),
+        ("Usable yield", "Usable Yield (%) is the share of a package you can use after peeling or trimming. "
+                         "Landed Unit Cost = (Package Cost + Shipping) / (Qty per Package x Yield)."),
+        ("Food cost target", "Menu items whose Cost % is above the target set on the website are highlighted red."),
+        ("Allergens", "Listed per ingredient; each menu item shows every allergen in its recipe. Cross-contact "
+                      "(shared blenders) is not tracked."),
         ("Units", "All stock quantities are in the ingredient's Recipe Unit (e.g. oz). "
                   "'Qty per Package' says how many recipe units are in one purchased package."),
         ("Landed Unit Cost", "(Package Cost + Shipping per Package) / Qty per Package."),
@@ -196,7 +208,7 @@ def export_workbook(store: Store, path=EXPORT_PATH):
         L = {h: f"{col(ING_COLS, h)}{r}" for h, *_ in ING_COLS}
         formulas = {
             "Landed Unit Cost ($)": f"=IFERROR(({L['Package Cost ($)']}+{L['Shipping per Package ($)']})"
-                                    f"/{L['Qty per Package (units)']},0)",
+                                    f"/({L['Qty per Package (units)']}*{L['Usable Yield (%)']}/100),0)",
             "Used in # Items": f"=COUNTIF(Recipes!${R['Ingredient ID']}$2:${R['Ingredient ID']}${n_rec},"
                                f"{L['Ingredient ID']})",
             "Units Used (sales log)": f"=SUMIFS(Recipes!${R['Ingredient Used']}$2:${R['Ingredient Used']}${n_rec},"
@@ -205,13 +217,17 @@ def export_workbook(store: Store, path=EXPORT_PATH):
             "Status": f'=IF({L["On Hand (units)"]}<={L["Reorder Point (units)"]},"REORDER","OK")',
             "Suggested Order (pkgs)": f"=IF({L['On Hand (units)']}<={L['Reorder Point (units)']},"
                                       f"MAX({L['Min Order (pkgs)']},ROUNDUP(MAX({L['Par Level (units)']}"
-                                      f"-{L['On Hand (units)']},0)/{L['Qty per Package (units)']},0)),0)",
+                                      f"-{L['On Hand (units)']},0)/({L['Qty per Package (units)']}"
+                                      f"*{L['Usable Yield (%)']}/100),0)),0)",
             "Order Cost ($)": f"={L['Suggested Order (pkgs)']}*({L['Package Cost ($)']}"
                               f"+{L['Shipping per Package ($)']})",
             "Stock Value ($)": f"=MAX({L['On Hand (units)']},0)*{L['Landed Unit Cost ($)']}",
         }
         for c, (header, key, kind, _w, fmt) in enumerate(ING_COLS, start=1):
-            cell = ws.cell(row=r, column=c, value=ing.get(key) if key else formulas[header])
+            value = ing.get(key) if key else formulas[header]
+            if isinstance(value, list):
+                value = ", ".join(value)
+            cell = ws.cell(row=r, column=c, value=value)
             _style_cell(cell, kind, fmt)
     last = len(ings) + 1
     status = col(ING_COLS, "Status")
@@ -222,6 +238,12 @@ def export_workbook(store: Store, path=EXPORT_PATH):
     dv = DataValidation(type="list", formula1='"' + ",".join(UNITS) + '"', allow_blank=True)
     ws.add_data_validation(dv)
     dv.add(f"{col(ING_COLS, 'Recipe Unit')}2:{col(ING_COLS, 'Recipe Unit')}{n_ing}")
+    ws[f"{col(ING_COLS, 'Usable Yield (%)')}1"].comment = Comment(
+        "Share of each package you can actually use after peeling, trimming or coring (100 = no waste). "
+        "Unit cost and reorder quantities are based on the usable amount.", "Inventory")
+    ws[f"{col(ING_COLS, 'Allergens')}1"].comment = Comment(
+        "Comma-separated, from: " + ", ".join(ALLERGENS) + ". Menu items list the allergens of their ingredients.",
+        "Inventory")
     ws[f"{col(ING_COLS, 'Reorder Point (units)')}1"].comment = Comment(
         "Reorder when On Hand falls to this level. Rule of thumb: daily usage x lead time + safety stock.",
         "Inventory")
@@ -239,6 +261,7 @@ def export_workbook(store: Store, path=EXPORT_PATH):
             "Cost %": f"=IFERROR({L['Ingredient Cost ($)']}/{L['Price ($)']},0)",
             "Units Sold": f"=SUMIFS('Sales Log'!$C$2:$C${n_sales},'Sales Log'!$B$2:$B${n_sales},{L['Item ID']})",
             "Revenue ($)": f"={L['Units Sold']}*{L['Price ($)']}",
+            "Allergens": ", ".join(store.item_allergens(it)) or "none listed",
         }
         for c, (header, key, kind, _w, fmt) in enumerate(ITEM_COLS, start=1):
             value = formulas[header] if not key else ("Yes" if key == "active" and it.get(key) else
@@ -253,7 +276,8 @@ def export_workbook(store: Store, path=EXPORT_PATH):
     dv.add(f"{col(ITEM_COLS, 'Active')}2:{col(ITEM_COLS, 'Active')}{n_items}")
     pct = col(ITEM_COLS, "Cost %")
     ws.conditional_formatting.add(f"{pct}2:{pct}{n_items}",
-                                  CellIsRule(operator="greaterThan", formula=["0.35"], fill=RED_FILL))
+                                  CellIsRule(operator="greaterThan", formula=[str(data["settings"]["target_food_cost"])],
+                                             fill=RED_FILL))
 
     # --- Recipes (bill of materials) ----------------------------------------
     ws = wb.create_sheet("Recipes")
@@ -414,6 +438,74 @@ def export_workbook(store: Store, path=EXPORT_PATH):
     ws.conditional_formatting.add(f"A2:P{max(r - 1, 2)}",
                                   FormulaRule(formula=['OR($M2>0,$N2>0,$H2="Yes",$I2="Yes")'], fill=RED_FILL))
     ws.auto_filter.ref = f"A1:P{max(r - 1, 2)}"
+    ws.freeze_panes = "A2"
+
+    # --- Price Changes ---------------------------------------------------------
+    ws = wb.create_sheet("Price Changes")
+    pc_cols = [("Date", 16), ("Ingredient", 22), ("Source", 18), ("Old Pkg Cost ($)", 11), ("New Pkg Cost ($)", 11),
+               ("Old Unit Cost ($)", 11), ("New Unit Cost ($)", 11), ("Change", 9), ("Menu Items Affected", 60)]
+    for c, (header, width) in enumerate(pc_cols, start=1):
+        cell = ws.cell(row=1, column=c, value=header)
+        cell.font, cell.fill = HEADER, HEADER_FILL
+        cell.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
+        ws.column_dimensions[get_column_letter(c)].width = width
+    ws.row_dimensions[1].height = 32
+    for r, pc in enumerate(reversed(data["price_changes"]), start=2):
+        affected = "; ".join(
+            f"{i['name']} {i['old_cost'] / i['price']:.1%} -> {i['new_cost'] / i['price']:.1%}" if i["price"] else i["name"]
+            for i in pc["items"])
+        vals = [pc["at"].replace("T", " "), pc["ingredient"], pc["source"], pc["old"]["package_cost"],
+                pc["new"]["package_cost"], pc["old"]["unit_cost"], pc["new"]["unit_cost"],
+                f"=IFERROR(G{r}/F{r}-1,0)", affected]
+        for c, v in enumerate(vals, start=1):
+            _style_cell(ws.cell(row=r, column=c, value=v), "f" if c == 8 else "in",
+                        MONEY if c in (4, 5) else MONEY4 if c in (6, 7) else PCT if c == 8 else None)
+    ws.freeze_panes = "A2"
+
+    # --- Stock Counts ----------------------------------------------------------
+    ws = wb.create_sheet("Stock Counts")
+    ct_cols = [("Counted At", 16), ("Count #", 8), ("Counted By", 16), ("Ingredient", 22), ("Unit", 7),
+               ("System Expected", 10), ("Counted", 10), ("Variance", 10), ("Unit Cost ($)", 10), ("Variance ($)", 11),
+               ("Usage Since Last Count", 11), ("Variance % of Usage", 10), ("Notes", 26)]
+    for c, (header, width) in enumerate(ct_cols, start=1):
+        cell = ws.cell(row=1, column=c, value=header)
+        cell.font, cell.fill = HEADER, HEADER_FILL
+        cell.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
+        ws.column_dimensions[get_column_letter(c)].width = width
+    ws.row_dimensions[1].height = 32
+    r = 2
+    for ct in reversed(data["counts"]):
+        who = store.employee(ct["counted_by"]) if ct["counted_by"] else None
+        for line in ct["lines"]:
+            ing = store.ingredient(line["ingredient_id"]) or {}
+            vals = [ct["at"].replace("T", " "), ct["id"], who["name"] if who else "", ing.get("name", line["ingredient_id"]),
+                    ing.get("unit", ""), line["expected"], line["counted"], f"=G{r}-F{r}", line["unit_cost"], f"=H{r}*I{r}",
+                    line["theoretical_usage"], f'=IF(K{r}>0,-H{r}/K{r},"")', ct["notes"]]
+            for c, v in enumerate(vals, start=1):
+                _style_cell(ws.cell(row=r, column=c, value=v), "f" if c in (8, 10, 12) else "in",
+                            QTY if c in (6, 7, 8, 11) else MONEY4 if c == 9 else MONEY if c == 10 else PCT if c == 12 else None)
+            r += 1
+    ws.conditional_formatting.add(f"H2:J{max(r - 1, 2)}", CellIsRule(operator="lessThan", formula=["0"], fill=RED_FILL))
+    ws.freeze_panes = "A2"
+
+    # --- Waste Log --------------------------------------------------------------
+    ws = wb.create_sheet("Waste Log")
+    ws_cols = [("Logged At", 16), ("Entry #", 8), ("Logged By", 16), ("Type", 10), ("What", 22), ("Qty", 8), ("Unit", 8),
+               ("Reason", 18), ("Cost ($)", 10), ("Note", 34)]
+    for c, (header, width) in enumerate(ws_cols, start=1):
+        cell = ws.cell(row=1, column=c, value=header)
+        cell.font, cell.fill = HEADER, HEADER_FILL
+        ws.column_dimensions[get_column_letter(c)].width = width
+    for r, w in enumerate(reversed(data["waste"]), start=2):
+        who = store.employee(w["by"]) if w["by"] else None
+        vals = [w["at"].replace("T", " "), w["id"], who["name"] if who else "", "Drink" if w["kind"] == "item" else "Ingredient",
+                w["name"], w["qty"], "drinks" if w["kind"] == "item" else w.get("unit", ""), w["reason"], w["cost"], w["note"]]
+        for c, v in enumerate(vals, start=1):
+            _style_cell(ws.cell(row=r, column=c, value=v), "in", QTY if c == 6 else MONEY if c == 9 else None)
+    n = len(data["waste"]) + 3
+    ws.cell(row=n, column=8, value="Total").font = Font(name=FONT, bold=True)
+    c = ws.cell(row=n, column=9, value=f"=SUM(I2:I{n - 2})")
+    c.font, c.number_format = Font(name=FONT, bold=True), MONEY
     ws.freeze_panes = "A2"
 
     # --- Sales Log -------------------------------------------------------------
