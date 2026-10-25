@@ -1,0 +1,6 @@
+.git
+data
+exports
+docs
+__pycache__
+*.pyc

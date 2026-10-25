@@ -151,6 +151,18 @@ legend { font-weight: 700; padding: 0 6px; }
 details { margin-top: 8px; font-size: 13px; }
 .pq { width: 70px; }
 
+/* sign-in and roles */
+body.login-page { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
+.login-box { width: min(380px, 100%); padding: 24px; }
+.login-box .brand { margin-bottom: 14px; }
+.login-box h2 { margin: 6px 0 12px; }
+.user-chip { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.user-chip .pill { text-transform: capitalize; }
+body.role-staff .mgr-only, body:not(.role-owner) .owner-only { display: none !important; }
+
+.user-form { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
+.user-form button { margin-bottom: 10px; }
+
 /* counts & waste */
 .grid-stock { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 #ct-table input { width: 90px; }
@@ -231,7 +243,7 @@ table.sched tfoot th, table.sched tfoot td { font-size: 12.5px; background: var(
 
 @media (max-width: 860px) {
   .builder, .grid-sell, .grid-recv, .grid-stock { grid-template-columns: 1fr; }
-  .imp-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .imp-map, .user-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid2 { grid-template-columns: 1fr; }
   main { padding: 12px; }

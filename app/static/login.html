@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Menu & Inventory</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="login-page">
+  <main class="login-box card">
+    <div class="brand"><span class="logo">🧃</span> Menu &amp; Inventory</div>
+    <form id="login-form">
+      <h2>Sign in</h2>
+      <label>Username <input name="username" autocomplete="username" required autofocus></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary wide">Sign in</button>
+      <p class="hint">Forgot your password? Ask the owner to reset it on the Settings tab.</p>
+    </form>
+    <form id="setup-form" hidden>
+      <h2>Create the owner account</h2>
+      <p class="hint">This is the first visit. The owner can add managers and staff afterwards.</p>
+      <label>Your name <input name="name" required></label>
+      <label>Username <input name="username" autocomplete="username" required></label>
+      <label>Password (8+ characters) <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+      <label>Password again <input name="confirm" type="password" autocomplete="new-password" minlength="8" required></label>
+      <button class="primary wide">Create account and sign in</button>
+    </form>
+    <div id="login-error" class="bad-text" role="alert"></div>
+  </main>
+  <script src="/static/login.js"></script>
+</body>
+</html>

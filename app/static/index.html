@@ -10,17 +10,19 @@
   <header class="topbar">
     <div class="brand"><span class="logo">🧃</span> <span class="brand-name">Menu &amp; Inventory</span></div>
     <nav id="tabs">
-      <button data-tab="dashboard" class="active">Dashboard</button>
+      <button data-tab="dashboard" class="active mgr-only">Dashboard</button>
       <button data-tab="menu">Menu</button>
-      <button data-tab="ingredients">Ingredients</button>
+      <button data-tab="ingredients" class="mgr-only">Ingredients</button>
       <button data-tab="sell">Record Sales</button>
-      <button data-tab="procurement">Procurement</button>
+      <button data-tab="procurement" class="mgr-only">Procurement</button>
       <button data-tab="receiving">Receiving</button>
       <button data-tab="stock">Counts &amp; Waste</button>
       <button data-tab="schedule">Schedule</button>
-      <button data-tab="excel">Excel</button>
+      <button data-tab="excel" class="mgr-only">Excel</button>
       <button data-tab="settings">Settings</button>
     </nav>
+    <div class="user-chip"><span id="me-name"></span><span class="pill" id="me-role"></span>
+      <button class="ghost small" id="logout">Sign out</button></div>
   </header>
 
   <main>
@@ -51,7 +53,7 @@
         <input id="menu-search" type="search" placeholder="Search menu…">
         <select id="menu-category"><option value="">All categories</option></select>
         <span class="spacer"></span>
-        <button class="primary" id="new-item">+ New menu item</button>
+        <button class="primary mgr-only" id="new-item">+ New menu item</button>
       </div>
       <div id="menu-grid" class="menu-grid"></div>
     </section>
@@ -85,7 +87,7 @@
           <button class="ghost wide" id="ticket-clear">Clear</button>
         </div>
       </div>
-      <div class="card">
+      <div class="card mgr-only">
         <h2>Import sales from your till system</h2>
         <p class="hint">Export an item-sales report as CSV from Square, Toast, Clover or similar (one row per item sold, with
           date and quantity) and load it here. Each drink deducts its ingredients just like a sale rung up on this page.
@@ -190,20 +192,20 @@
         <button class="ghost" id="wk-today">This week</button>
         <span class="spacer"></span>
         <label class="check"><input type="checkbox" id="show-former"> Show former staff</label>
-        <button class="ghost" id="wk-copy">Copy last week</button>
-        <button class="primary" id="new-emp">+ Employee</button>
+        <button class="ghost mgr-only" id="wk-copy">Copy last week</button>
+        <button class="primary mgr-only" id="new-emp">+ Employee</button>
       </div>
-      <div class="kpis" id="sched-kpis"></div>
+      <div class="kpis mgr-only" id="sched-kpis"></div>
       <div id="sched-warnings"></div>
       <div class="card flush"><div class="table-wrap"><table id="sched" class="sched"></table></div></div>
-      <p class="hint">Drag a shift to move it to another person or day; hold Ctrl (or Alt/Option) while dropping to copy it.
+      <p class="hint mgr-only">Drag a shift to move it to another person or day; hold Ctrl (or Alt/Option) while dropping to copy it.
         Click an empty spot to add a shift, a shift to edit it, or a name to edit that employee.</p>
     </section>
 
     <!-- Settings -->
     <section id="tab-settings" class="tab">
       <div class="grid2">
-        <div class="card">
+        <div class="card owner-only">
           <h2>Business</h2>
           <form id="settings-form">
             <label>Business name <input name="business_name" placeholder="Shown at the top of every page"></label>
@@ -211,6 +213,39 @@
             <p class="hint">Drinks whose ingredient cost is above this share of the price are flagged in red.</p>
             <button class="primary">Save settings</button>
           </form>
+        </div>
+        <div class="card">
+          <h2>My account</h2>
+          <p class="hint" id="me-summary"></p>
+          <form id="pw-form">
+            <label>Current password <input name="current" type="password" autocomplete="current-password" required></label>
+            <label>New password (8+ characters) <input name="new" type="password" autocomplete="new-password" minlength="8" required></label>
+            <button class="ghost">Change password</button>
+          </form>
+        </div>
+        <div class="card owner-only span-all">
+          <h2>Users</h2>
+          <p class="hint"><b>Staff</b> record sales, receive deliveries, count stock, log waste and see the menu and schedule.
+            <b>Managers</b> also run the menu, ingredients, ordering, schedule, imports and Excel. <b>Owners</b> also manage users,
+            settings and backups. Linking a user to an employee fills in their name on receipts, counts and waste.</p>
+          <div class="table-wrap"><table class="data compact" id="users-table"></table></div>
+          <h3>Add a user</h3>
+          <form id="user-form" class="user-form">
+            <label>Name <input name="name" required></label>
+            <label>Username <input name="username" required autocomplete="off"></label>
+            <label>Temporary password <input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+            <label>Role <select name="role"><option>staff</option><option>manager</option><option>owner</option></select></label>
+            <label>Employee <select name="employee_id" id="user-emp"></select></label>
+            <button class="primary">Add user</button>
+          </form>
+        </div>
+        <div class="card owner-only span-all">
+          <h2>Backups</h2>
+          <p class="hint">A copy of all data is saved automatically every day (the last 30 days are kept), plus an extra copy
+            before every Excel or sales import. Download a full backup (data, users and pictures) regularly and keep it somewhere
+            other than this computer. To restore one, stop the app and run <code>python -m app.backup restore &lt;file&gt;</code>.</p>
+          <a class="button primary" href="/api/backup.zip">Download full backup (.zip)</a>
+          <div class="table-wrap"><table class="data compact" id="backups-table"></table></div>
         </div>
       </div>
     </section>

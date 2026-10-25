@@ -21,9 +21,11 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from .store import ALLERGENS, ROOT, UNITS, Store, week_start
+from .store import ALLERGENS, DATA_DIR, ROOT, UNITS, Store, week_start
 
-EXPORT_PATH = os.path.join(ROOT, "exports", "inventory.xlsx")
+EXPORT_DIR = os.environ.get("MENU_EXPORT_DIR") or (
+    os.path.join(DATA_DIR, "exports") if os.environ.get("MENU_DATA_DIR") else os.path.join(ROOT, "exports"))
+EXPORT_PATH = os.path.join(EXPORT_DIR, "inventory.xlsx")
 
 FONT = "Arial"
 INPUT = Font(name=FONT, color="0000FF")

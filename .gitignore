@@ -4,3 +4,12 @@ __pycache__/
 *.tmp.xlsx
 ~$*.xlsx
 .DS_Store
+
+# Live business data stays out of git: it holds sales, pay rates and password hashes.
+# (The server creates data/catalog.json from the sample data on first run.)
+data/catalog.json
+data/users.json
+data/backups/
+data/images/*
+!data/images/.gitkeep
+exports/

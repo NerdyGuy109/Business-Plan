@@ -1,0 +1,24 @@
+# Menu & Inventory behind Caddy, which gets and renews an HTTPS certificate automatically.
+# 1. Point a DNS name (e.g. inventory.yourshop.com) at this server.
+# 2. Put that name in deploy/Caddyfile.
+# 3. From the repository root:  docker compose -f deploy/docker-compose.yml up -d --build
+services:
+  app:
+    build: ..
+    restart: unless-stopped
+    environment:
+      MENU_SECURE_COOKIES: "1"   # cookies only over HTTPS
+      MENU_TRUST_PROXY: "1"      # use the client address Caddy passes on (for login rate limits)
+    volumes:
+      - menu-data:/data
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [app]
+volumes:
+  menu-data:
+  caddy-data:

@@ -19,7 +19,8 @@ import threading
 from datetime import date, datetime, timedelta
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(ROOT, "data")
+# Where the data lives. Set MENU_DATA_DIR to keep it on a persistent disk when hosted.
+DATA_DIR = os.environ.get("MENU_DATA_DIR") or os.path.join(ROOT, "data")
 DATA_FILE = os.path.join(DATA_DIR, "catalog.json")
 IMAGE_DIR = os.path.join(DATA_DIR, "images")
 

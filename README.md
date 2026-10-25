@@ -15,7 +15,7 @@ It has two parts that stay in sync:
 
 | | What it's for |
 |---|---|
-| **Website** (`app/`) | Add and edit menu items with a picture and description, build recipes by clicking ingredients, maintain ingredient purchasing info, record sales, create and receive purchase orders, and schedule staff. |
+| **Website** (`app/`) | Add and edit menu items with a picture and description, build recipes by clicking ingredients, maintain ingredient purchasing info, import sales from the till system, receive deliveries, count stock and log waste, schedule staff, and track allergens and price changes. Everyone signs in with their own account. |
 | **Excel workbook** (`exports/inventory.xlsx`) | The same data as a spreadsheet with live formulas, for analysis, sharing, or bulk edits. Rewritten automatically after every change on the website; edits made in Excel can be imported back. |
 
 ## Quick start
@@ -29,9 +29,21 @@ python -m app.server            # then open http://localhost:8000
 
 Or double-click `start.sh` (Mac/Linux) / `start.bat` (Windows).
 
+**The first time you open it, it asks you to create the owner account** (name, username, password).
+The owner adds managers and staff on the Settings tab. Forgot the owner password? Stop the app and run
+`python -m app.auth password <username>`.
+
 The first run loads the sample juice bar. To reset to the sample data run
-`python -m app.seed`; to start your own catalog from scratch run `python -m app.seed --empty`.
-Both overwrite `data/catalog.json`.
+`python -m app.seed`; to start your own catalog from scratch run `python -m app.seed --empty`
+(or start the server with `--empty` on a brand-new install). Both overwrite `data/catalog.json`.
+
+To use it from tablets or phones on the shop Wi-Fi, or to host it online with HTTPS, see
+[docs/HOSTING.md](docs/HOSTING.md).
+
+**Your data is not stored in git.** `data/` (catalog, users, pictures, backups) and `exports/` are
+ignored, because they hold sales, pay rates and password hashes. Back them up with the Settings →
+Backups download. If you are updating from an older copy of this project, copy your old `data/`
+folder into the new one before starting it.
 
 ## The website
 
@@ -41,11 +53,26 @@ Both overwrite `data/catalog.json`.
 | **Menu** | Cards for each item with picture, price, ingredients, cost, margin and food-cost %. Click a card to edit. |
 | **Menu item builder** | Drop in a picture, fill in name/price/description, then click ingredients to add them (click again for more, or type a name and press Enter). Adjust quantities with − / +. Cost, margin, cost % and "can make now" update live, with suggested prices for 25% and 30% food cost. *Duplicate as new* makes variations fast (e.g. a large size or a protein version). Missing an ingredient? *+ New ingredient* creates it and drops it into the recipe. |
 | **Ingredients** | All parts with package, cost, landed unit cost, lead time, shelf life, stock, reorder point / par level, recent daily usage and which items use them. Click a row to edit. Deleting is blocked while an ingredient is still in a recipe. |
-| **Record Sales** | Tap items onto a ticket and record the sale. Every ingredient in each recipe is deducted from stock. |
+| **Record Sales** | Tap items onto a ticket and record the sale. Every ingredient in each recipe is deducted from stock. Each drink button shows its allergens. |
+| **Import sales** (on Record Sales) | Load the item-sales CSV export from Square, Toast, Clover or similar. Columns (date, time, item, size, quantity, refund type) are detected automatically and can be changed. Names are matched to menu items by name or by a match you chose before; anything that isn't a drink (gift cards) can be ignored. Refunds are skipped, the same file can't be loaded twice by accident, and any import can be undone, which puts its ingredients back in stock. A sample export is in `docs/samples/`. |
 | **Procurement** | Ingredients at or below their reorder point, grouped by supplier, with suggested package counts (editable). *Create purchase order*; *Receive…* opens it on the Receiving tab. |
 | **Receiving** | Check in a delivery: pick the order (overdue and due-today orders are flagged), choose who received it, confirm the date/time and tracking or invoice number, then tick each item that arrived in good condition or enter how many arrived OK and how many were damaged, with a note. Flag damaged outer packaging or wrong items and add delivery notes. Submitting adds the good packages to stock; missing or damaged items stay on order (the order shows as *partly received*) unless you tick "nothing else is coming" to close it short. *Log a delay* records what the supplier said and a new expected date. Every delivery appears in the receiving log. |
 | **Schedule** | Weekly staff schedule. Drag a shift to move it to another person or day (hold Ctrl/Alt to copy), click an empty spot to add one, click a name to edit that employee. Shows hours vs. each person's max, labor cost, sales and labor % per day, open shifts and double-bookings. *Copy last week* starts a new week from the previous one. Removing an employee keeps their past shifts for labor history and turns their upcoming shifts into open shifts. |
+| **Counts & Waste** | **Stock count:** enter what's really on the shelf; on-hand becomes the count and the variance report shows each difference in units, dollars and as a share of what sales and waste say was used since the last count (over-portioning, unlogged waste, mistakes or theft). **Waste log:** record ingredients or whole drinks thrown away, spilled, remade, drunk by staff or given away, with reason and cost; this week's waste is totalled by reason. |
 | **Excel** | Download the workbook, or import an edited one. |
+| **Settings** | Business name and target food cost (drinks above it are flagged). Owners also manage users and download backups; everyone can change their own password. |
+
+The **Dashboard** also lists ingredient **cost changes** from the last 30 days, whether entered by hand,
+taken from an invoice price while receiving, or imported from Excel, with what each did to the food cost
+of the drinks that use it, and which drinks are above the target.
+
+### Who can do what
+
+| Role | Can |
+|---|---|
+| Staff | Record sales, receive deliveries, count stock, log waste, view the menu (with allergens) and the schedule. They don't see other people's pay rates. |
+| Manager | Everything day to day: menu, ingredients, ordering, schedule, sales imports, Excel |
+| Owner | Also users, business settings and backups |
 
 ### Ingredient purchasing fields
 
@@ -53,7 +80,9 @@ Both overwrite `data/catalog.json`.
 |---|---|
 | Recipe unit | The unit recipes and stock use (oz, fl oz, g, each, scoop...). |
 | Package description / Qty in package | How it's bought, e.g. "1 gal jug" = 128 fl oz. |
-| Package cost, Shipping per package | Landed unit cost = (package cost + shipping) ÷ qty in package. |
+| Package cost, Shipping per package | Landed unit cost = (package cost + shipping) ÷ usable qty per package. |
+| Usable yield % | Share of a package you can actually use after peeling, trimming or coring (100 = no waste). Cost, receiving and reorder quantities use the usable amount. |
+| Allergens | Which of the nine major allergens (milk, eggs, fish, shellfish, tree nuts, peanuts, wheat, soy, sesame) the ingredient contains. Menu items list every allergen in their recipe. Cross-contact from shared blenders is not tracked. |
 | Lead time, Shelf life | Days from order to delivery; days it stays usable. |
 | Min order | Minimum packages the supplier will sell. |
 | On hand, Reorder point, Par level | When on hand ≤ reorder point, order enough packages to get back to par. The editor suggests a reorder point from recent usage × lead time × 1.5. |
@@ -68,6 +97,9 @@ Both overwrite `data/catalog.json`.
 | Recipes | The item ↔ ingredient associations: one row per ingredient per item with quantity. Names, units and costs are looked up by formula. |
 | Where Used | Matrix of every ingredient × every menu item showing the quantity used. |
 | Procurement | Every ingredient grouped by supplier, REORDER rows highlighted, order totals and expected arrival dates. |
+| Price Changes | Every ingredient cost change and its effect on each drink's food cost. |
+| Stock Counts | Each count line: expected, counted, variance in units and dollars, and as a share of usage. |
+| Waste Log | Everything logged as wasted, with reason and cost. |
 | Purchase Orders | Each order line with packages ordered, received OK, damaged and still outstanding. |
 | Receiving Log | Every delivery checked in: when, who, tracking/invoice #, late, damage, shortages and notes. |
 | Sales Log | Sales recorded on the website. |
@@ -90,21 +122,35 @@ From the command line: `python -m app.excel` (export) or `python -m app.excel im
 ## Files
 
 ```
-app/server.py     web server + JSON API (Python standard library)
-app/store.py      data model and business rules (costing, reorder, sales, POs)
-app/excel.py      Excel export/import
-app/seed.py       sample juice bar data
-app/static/       website (HTML/CSS/JS, no build step)
-data/catalog.json the data (source of truth) — back this up
-data/images/      uploaded item pictures
-exports/inventory.xlsx  generated workbook
+app/server.py      web server + JSON API (Python standard library), sign-in and role checks
+app/store.py       data model and business rules (costing, yield, reorder, sales, receiving, counts, waste)
+app/pos_import.py  till-system CSV import
+app/auth.py        users, passwords, sessions, roles
+app/backup.py      automatic daily backups, full-backup zip, restore
+app/excel.py       Excel export/import
+app/seed.py        sample juice bar data
+app/static/        website (HTML/CSS/JS, no build step)
+data/              the live data: catalog.json, users.json, images/, backups/  (not in git)
+exports/           the generated inventory.xlsx  (not in git)
+docs/HOSTING.md    running it for a real shop: shop Wi-Fi, cloud server, backups, security
+deploy/            Docker Compose + Caddy (automatic HTTPS) for hosting
+docs/samples/      a sample till export and a sample workbook
+tests/             automated tests
 ```
 
-The server listens on `127.0.0.1` only. It has no login, so if you expose it to other
-devices (`--host 0.0.0.0`) do it only on a trusted network.
+The server listens on `127.0.0.1` (this computer only) unless started with `--host 0.0.0.0`.
 
 ## Sales materials
 
 `docs/brochure/Menu-Inventory-Brochure.pdf` is a two-page leave-behind (front: the pitch; back: every
 feature with a screenshot). Fill in the contact placeholders in `docs/brochure/brochure.html` and re-render it by
 opening that file in Chrome and choosing Print → Save as PDF (Letter, margins none, background graphics on).
+
+## Tests
+
+```bash
+python -m unittest discover tests
+```
+27 automated checks cover costing, yields, allergens, price-change tracking, sales, receiving, counts, waste,
+the POS import, scheduling, the Excel round trip, passwords and lockout, and the web server's role and CSRF
+rules. They run against a throwaway folder and never touch your data.

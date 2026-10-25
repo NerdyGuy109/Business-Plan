@@ -15,6 +15,7 @@ const money = (v, d = 2) => (v < 0 ? "-$" : "$") + Math.abs(v || 0).toLocaleStri
 const num = (v) => (Math.round((v || 0) * 100) / 100).toLocaleString();
 const pct = (v) => ((v || 0) * 100).toFixed(1) + "%";
 const me = () => S.me || null;
+const isMgr = () => !!me() && me().role !== "staff";
 const target = () => S.settings?.target_food_cost ?? 0.35;
 const allergenLine = (list) => list && list.length ? `<div class="allergens">Contains: ${list.map(esc).join(", ")}</div>` : "";
 const ingById = (id) => S.ingredients.find((i) => i.id === id);
@@ -32,9 +33,10 @@ function toast(msg, bad = false) {
 async function api(method, url, body) {
   const res = await fetch(url, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Requested-With": "app" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (res.status === 401) { location.href = "/login"; throw new Error("Please sign in"); }
   const data = await res.json().catch(() => ({ error: res.statusText }));
   if (!res.ok) throw new Error(data.error || res.statusText);
   if (data.state) { S = data.state; render(); }
@@ -74,6 +76,7 @@ function render() {
   renderSchedule();
   renderReceiving();
   renderSettings();
+  renderAccount();
   renderStock();
   renderImportHistory();
   if ($("#item-dialog").open) renderBuilder();
@@ -193,6 +196,7 @@ function renderMenu() {
 $("#menu-search").addEventListener("input", renderMenu);
 $("#menu-category").addEventListener("change", renderMenu);
 $("#menu-grid").addEventListener("click", (e) => {
+  if (!isMgr()) return;
   const card = e.target.closest(".menu-card");
   if (card) openItem(itemById(card.dataset.id));
 });
@@ -638,8 +642,8 @@ function renderSchedule() {
     const head = emp
       ? `<th class="emp" data-emp="${esc(emp.id)}" style="--c:${esc(emp.color)}"><span class="dot"></span><b>${esc(emp.name)}</b>
           ${emp.active ? "" : '<span class="pill">former</span>'}
-          <div class="hint">${esc(emp.role)} · ${money(emp.hourly_rate)}/h</div>
-          <div class="hint ${over ? "bad-text" : ""}">${num(hours)} / ${num(emp.max_hours)}h · ${money(hours * emp.hourly_rate, 0)}</div></th>`
+          <div class="hint">${esc(emp.role)}${emp.hourly_rate != null ? ` · ${money(emp.hourly_rate)}/h` : ""}</div>
+          <div class="hint ${over ? "bad-text" : ""}">${num(hours)} / ${num(emp.max_hours)}h${emp.hourly_rate != null ? ` · ${money(hours * emp.hourly_rate, 0)}` : ""}</div></th>`
       : `<th class="emp open-row"><b>Open shifts</b><div class="hint">${open.length ? `${open.length} to fill` : "none"}</div></th>`;
     return `<tr>${head}${days.map((d) => `<td class="cell ${d === today ? "today" : ""}" data-emp="${emp ? esc(emp.id) : ""}" data-date="${d}">
       ${mine.filter((s) => s.date === d).sort((a, b) => a.start.localeCompare(b.start)).map(chip).join("")}</td>`).join("")}</tr>`;
@@ -657,8 +661,8 @@ function renderSchedule() {
     <tbody>${body}</tbody>
     <tfoot>
       <tr><th class="emp">Staff hours</th>${perDay.map((p) => `<td>${num(p.hours)}h <span class="hint">· ${p.people} people</span></td>`).join("")}</tr>
-      <tr><th class="emp">Labor cost</th>${perDay.map((p) => `<td>${money(p.labor, 0)}</td>`).join("")}</tr>
-      <tr><th class="emp">Sales recorded</th>${perDay.map((p) => `<td>${p.sales ? money(p.sales, 0) : "–"}${p.sales ? ` <span class="hint">· labor ${pct(p.labor / p.sales)}</span>` : ""}</td>`).join("")}</tr>
+      <tr class="mgr-only"><th class="emp">Labor cost</th>${perDay.map((p) => `<td>${money(p.labor, 0)}</td>`).join("")}</tr>
+      <tr class="mgr-only"><th class="emp">Sales recorded</th>${perDay.map((p) => `<td>${p.sales ? money(p.sales, 0) : "–"}${p.sales ? ` <span class="hint">· labor ${pct(p.labor / p.sales)}</span>` : ""}</td>`).join("")}</tr>
     </tfoot>`;
 
   if (clash.size) warnings.push(`${clash.size} shifts overlap another shift for the same person (outlined in red).`);
@@ -690,6 +694,7 @@ $("#wk-copy").addEventListener("click", async () => {
 
 // drag & drop: move a shift, or copy it with Ctrl / Alt held
 $("#sched").addEventListener("dragstart", (e) => {
+  if (!isMgr()) return e.preventDefault();
   const chip = e.target.closest(".shift");
   if (!chip) return;
   e.dataTransfer.setData("text/plain", chip.dataset.id);
@@ -724,6 +729,7 @@ $("#sched").addEventListener("drop", async (e) => {
   } catch (err) { toast(err.message, true); }
 });
 $("#sched").addEventListener("click", (e) => {
+  if (!isMgr()) return;
   const chip = e.target.closest(".shift");
   if (chip) return openShift(S.shifts.find((s) => s.id === chip.dataset.id));
   const cell = e.target.closest(".cell");
@@ -1195,7 +1201,7 @@ function renderWasteLog() {
     all.slice(0, 40).map((w) => `<tr><td>${esc(w.at.replace("T", " "))}</td><td>${esc(w.name)}${w.kind === "item" ? ' <span class="pill">drink</span>' : ""}</td>
       <td class="r">${num(w.qty)} ${esc(w.kind === "item" ? "" : w.unit || "")}</td><td>${esc(w.reason)}</td><td>${esc(empById(w.by)?.name || "–")}</td>
       <td class="r">${money(w.cost)}</td><td class="hint">${esc(w.note)}</td>
-      <td><button class="ghost small" data-unwaste="${esc(w.id)}" title="Remove this entry and put the stock back">Remove</button></td></tr>`).join("") + `</table>`
+      <td><button class="ghost small mgr-only" data-unwaste="${esc(w.id)}" title="Remove this entry and put the stock back">Remove</button></td></tr>`).join("") + `</table>`
     : `<p class="hint">No waste logged yet.</p>`;
 }
 $("#ws-log").addEventListener("click", async (e) => {
@@ -1306,6 +1312,70 @@ function renderSettings() {
   }
   $(".brand-name").textContent = S.settings?.business_name || "Menu & Inventory";
 }
+function renderAccount() {
+  const m = me();
+  if (!m) return;
+  $("#me-name").textContent = m.name;
+  $("#me-role").textContent = m.role;
+  $("#me-summary").textContent = `Signed in as ${m.username} (${m.role})` + (empById(m.employee_id) ? ` · linked to ${empById(m.employee_id).name}` : "");
+  if (m.role !== "owner") return;
+  const empOpts = (sel) => `<option value="">— none —</option>` + S.employees.filter((e) => e.active || e.id === sel)
+    .map((e) => `<option value="${esc(e.id)}" ${e.id === sel ? "selected" : ""}>${esc(e.name)}</option>`).join("");
+  if (!$("#user-form").contains(document.activeElement)) $("#user-emp").innerHTML = empOpts("");
+  $("#users-table").innerHTML = `<tr><th>Name</th><th>Username</th><th>Role</th><th>Employee</th><th>Last sign-in</th><th>Status</th><th></th></tr>` +
+    (S.users || []).map((u) => `<tr data-user="${esc(u.username)}" class="${u.active ? "" : "muted"}"><td>${esc(u.name)}</td><td>${esc(u.username)}</td>
+      <td><select class="u-role" ${u.username === m.username ? "disabled" : ""}>${(S.roles || []).map((r) => `<option ${r === u.role ? "selected" : ""}>${r}</option>`).join("")}</select></td>
+      <td><select class="u-emp">${empOpts(u.employee_id)}</select></td>
+      <td>${esc((u.last_login || "never").replace("T", " "))}</td><td>${u.active ? '<span class="pill good">active</span>' : '<span class="pill">disabled</span>'}</td>
+      <td><button class="ghost small u-reset">Reset password</button>
+        ${u.username === m.username ? "" : `<button class="ghost small u-toggle">${u.active ? "Disable" : "Enable"}</button>`}</td></tr>`).join("");
+  $("#backups-table").innerHTML = (S.backups || []).length ? `<tr><th>Saved</th><th>File</th><th class="r">Size</th><th></th></tr>` +
+    S.backups.slice(0, 15).map((b) => `<tr><td>${esc(b.modified.replace("T", " "))}</td><td>${esc(b.name)}</td><td class="r">${num(b.size / 1024)} KB</td>
+      <td><a href="/api/backups/${encodeURIComponent(b.name)}">Download</a></td></tr>`).join("") : `<tr><td class="hint">No automatic backups yet.</td></tr>`;
+}
+
+async function usersCall(method, url, body, msg) {
+  try { await api(method, url, body); if (msg) toast(msg); } catch (err) { toast(err.message, true); }
+}
+$("#users-table").addEventListener("change", (e) => {
+  const u = e.target.closest("tr[data-user]")?.dataset.user;
+  if (!u) return;
+  if (e.target.matches(".u-role")) usersCall("PUT", `/api/users/${u}`, { role: e.target.value }, `${u} is now ${e.target.value}`);
+  if (e.target.matches(".u-emp")) usersCall("PUT", `/api/users/${u}`, { employee_id: e.target.value }, "Saved");
+});
+$("#users-table").addEventListener("click", (e) => {
+  const row = e.target.closest("tr[data-user]");
+  if (!row) return;
+  const u = row.dataset.user, user = S.users.find((x) => x.username === u);
+  if (e.target.matches(".u-reset")) {
+    const pw = prompt(`New temporary password for ${u} (8+ characters). Give it to them and ask them to change it.`);
+    if (pw) usersCall("PUT", `/api/users/${u}`, { password: pw }, `Password reset for ${u}`);
+  }
+  if (e.target.matches(".u-toggle")) {
+    if (user.active && !confirm(`Disable ${u}? They will be signed out and can't sign in.`)) return;
+    usersCall("PUT", `/api/users/${u}`, { active: !user.active }, `${u} ${user.active ? "disabled" : "enabled"}`);
+  }
+});
+$("#user-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target.elements;
+  try {
+    await api("POST", "/api/users", { name: f.name.value, username: f.username.value, password: f.password.value, role: f.role.value, employee_id: f.employee_id.value });
+    toast(`Added ${f.username.value}`);
+    e.target.reset();
+  } catch (err) { toast(err.message, true); }
+});
+$("#pw-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target.elements;
+  try { await api("POST", "/api/me/password", { current: f.current.value, new: f.new.value }); toast("Password changed"); e.target.reset(); }
+  catch (err) { toast(err.message, true); }
+});
+$("#logout").addEventListener("click", async () => {
+  try { await api("POST", "/api/logout"); } catch (_) { /* signed out either way */ }
+  location.href = "/login";
+});
+
 $("#settings-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = e.target.elements;
@@ -1334,4 +1404,12 @@ $("#import-local").addEventListener("click", async () => {
 });
 
 // ------------------------------------------------------------------ boot
-api("GET", "/api/state").then((s) => { S = s; render(); }).catch((e) => toast(e.message, true));
+api("GET", "/api/state").then((s) => {
+  S = s;
+  document.body.classList.add(`role-${s.me.role}`);
+  render();
+  // staff land on Record Sales; anyone on a tab they can't see is moved to the first one they can
+  const active = $("#tabs button.active");
+  if (!active || getComputedStyle(active).display === "none")
+    (s.me.role === "staff" ? $('#tabs [data-tab="sell"]') : $$("#tabs button").find((b) => getComputedStyle(b).display !== "none"))?.click();
+}).catch((e) => toast(e.message, true));
