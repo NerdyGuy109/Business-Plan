@@ -136,7 +136,7 @@ app/static/        website (HTML/CSS/JS, no build step)
 data/              the live data: catalog.json, users.json, images/, backups/  (not in git)
 exports/           the generated inventory.xlsx  (not in git)
 docs/HOSTING.md    running it for a real shop: shop Wi-Fi, cloud server, backups, security
-deploy/            Docker Compose + Caddy (automatic HTTPS) for hosting
+deploy/            Docker Compose + Caddy (automatic HTTPS): one shop, or deploy/multi/ for a demo plus many shops
 docs/samples/      a sample till export and a sample workbook
 tests/             automated tests
 ```
@@ -157,6 +157,13 @@ In `docs/manuals/`, ready to print (Letter):
 The guides are HTML (`staff-guide.html`, `manager-guide.html`, shared `manual.css`); the quizzes are generated from
 `make_quiz.py` so the questions and the answer key always match. Edit them, then print to PDF from Chrome
 (Letter, default margins, background graphics on).
+
+## Launch plan
+
+`docs/launch/Launch-Plan.pdf` is the founder's plan for going from here to paying customers: business basics,
+one domain with a subdomain per shop (`deploy/multi/` runs a demo shop plus one install per customer on one
+server, with a nightly demo reset), testing it like a customer, a pilot shop, pricing and paperwork, the sales kit
+(demo script, objections) and recruiting and training a salesperson, ending with a checklist.
 
 ## Sales materials
 

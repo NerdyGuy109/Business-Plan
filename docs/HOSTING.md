@@ -49,6 +49,14 @@ You need a small Linux server (1 CPU and 1 GB of memory is plenty) with Docker i
 
 Hosted installs start with an empty catalog (no sample data). All data lives in the `menu-data` Docker volume.
 
+### Many shops on one server
+
+If you host shops for customers, use `deploy/multi/` instead: one server and one domain, with a demo shop at
+`demo.yourbrand.com` and each customer at their own subdomain, each with separate data, users and backups.
+`deploy/multi/reset-demo.sh` puts the demo back to the sample data (run it nightly from cron). On every new copy,
+create the owner account straight away from the command line (`docker compose exec <shop> python -m app.auth add <name> owner`)
+so nobody else can claim it. See `docs/launch/Launch-Plan.pdf`, sections 2 and 4.
+
 ## Option C: a hosting platform with a persistent disk
 
 Any platform that can run a Dockerfile and attach a persistent disk works. Point it at this repository's

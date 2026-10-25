@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Launch Plan · Menu &amp; Inventory</title>
+<link rel="stylesheet" href="../manuals/manual.css">
+<style>
+  :root { --doc-title: "Menu & Inventory · Launch plan (for the founder)"; }
+  .phase td:first-child { width: 22px; font-weight: 800; color: var(--green); }
+  .phase td:nth-child(2) { width: 26%; font-weight: 650; }
+  .phase td:last-child { width: 18%; color: var(--muted); }
+  pre { background: #f3f5f4; border-radius: 6px; padding: 7px 10px; font: 8.6pt/1.45 "JetBrains Mono", monospace; white-space: pre-wrap;
+    margin: 4px 0 10px; break-inside: avoid; }
+  code { font: 8.8pt "JetBrains Mono", monospace; background: #f1f4f2; padding: 0 3px; border-radius: 3px; }
+  .script td:first-child { width: 12%; font-weight: 650; color: var(--green); white-space: nowrap; }
+  .script td:nth-child(2) { width: 30%; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="brand"><span class="mark">M</span> Menu &amp; Inventory</div>
+  <h1>Launch plan</h1>
+  <p>For you, the founder: the steps from today to a live demo, a first real shop, a priced and papered offer,
+    and a trained salesperson. Work through it in order; each phase ends with a "done when" you can check.</p>
+</div>
+
+<section>
+  <h2>At a glance</h2>
+  <table class="phase">
+    <tr><th></th><th>Phase</th><th>Done when</th><th>Rough time*</th></tr>
+    <tr><td>1</td><td>Business basics</td><td>The business is registered, has a bank account and insurance quotes, and you know how you'll invoice.</td><td>Weeks 1–2</td></tr>
+    <tr><td>2</td><td>Your domain and server</td><td><b>https://demo.yourbrand.com</b> is live, secure and resets every night.</td><td>Weeks 2–3</td></tr>
+    <tr><td>3</td><td>Test it like a customer</td><td>You've run every task in both guides on the live demo, from a phone, and restored a backup.</td><td>Week 3</td></tr>
+    <tr><td>4</td><td>Pilot with one real shop</td><td>One shop has used it for 6–8 weeks and you have before/after numbers and a testimonial.</td><td>Weeks 3–10</td></tr>
+    <tr><td>5</td><td>Package, price and paperwork</td><td>A price sheet, a service agreement and a pilot agreement, reviewed once by a lawyer.</td><td>During the pilot</td></tr>
+    <tr><td>6</td><td>Sales kit</td><td>Brochure, proposal, demo logins, a 10-minute demo script and answers to objections are ready.</td><td>Weeks 8–11</td></tr>
+    <tr><td>7</td><td>Recruit and train a salesperson</td><td>They've passed both knowledge checks and given two demos while you watched.</td><td>Week 12 on</td></tr>
+  </table>
+  <p class="lead">*A guide for a solo founder working part-time. Phases 4 and 5 overlap; don't hire a salesperson before the pilot gives you real results to sell.</p>
+</section>
+
+<section>
+  <h2><span class="num">1</span>Business basics</h2>
+  <p>Do these before you take money from anyone. Rules differ by state and country, so check locally: a local small-business development
+    centre, a free mentoring service (in the US, the SBA and SCORE), or an accountant can tell you what applies to you in one meeting.</p>
+  <ul class="check">
+    <li><b>Name.</b> Pick a business and product name; check nobody else uses it for software (search the trademark register) and that the <b>.com</b> is free (section 2).</li>
+    <li><b>Register the business</b> (sole proprietor or a limited company / LLC). An LLC separates your personal assets from the business; ask an accountant which suits you.</li>
+    <li><b>Tax ID</b> (in the US an EIN, free from the IRS) and a <b>business bank account</b>. Keep business money separate from day one.</li>
+    <li><b>Bookkeeping</b>: a simple accounting app or spreadsheet for income, expenses and the server bills.</li>
+    <li><b>Insurance quotes</b>: general liability; <b>professional liability (errors and omissions)</b>, because shops will make ordering, pricing and
+      allergen decisions with your software; and <b>cyber liability</b>, because you'll hold their sales, staff and pay data.</li>
+    <li><b>Getting paid</b>: invoices that accept card and bank transfer, with automatic monthly billing for subscriptions.</li>
+  </ul>
+  <div class="note"><b>Not legal or tax advice</b> This plan lists what to sort out; a local professional should tell you how.</div>
+</section>
+
+<section>
+  <h2><span class="num">2</span>Your domain and server</h2>
+  <h3>One domain for everything: a subdomain per shop</h3>
+  <p><b>Yes: buy one domain for your brand, and use it for the demo and for every customer.</b> The app runs <b>one shop per copy</b>, so each
+    shop gets its own copy at its own subdomain, with its own data, logins and backups. One shop can never see another's data, and a problem in one doesn't touch the rest.</p>
+  <table>
+    <tr><th style="width:34%">Address</th><th>What it's for</th></tr>
+    <tr><td><b>demo</b>.yourbrand.com</td><td>Sales demos: the sample juice bar, with demo logins, put back to the sample every night.</td></tr>
+    <tr><td><b>sunrise</b>.yourbrand.com, <b>greenbar</b>.yourbrand.com …</td><td>One per paying (or pilot) shop. Starts empty; you load their menu.</td></tr>
+    <tr><td>yourbrand.com</td><td>Optional: a one-page website with the brochure and your contact details.</td></tr>
+    <tr><td>you@yourbrand.com</td><td>Business email on your domain. Customers and suppliers take it more seriously than a free address.</td></tr>
+  </table>
+
+  <h3>2.1 Buy the domain</h3>
+  <ul>
+    <li>Short, easy to spell when said out loud, ideally <b>.com</b>. Any well-known registrar works (Cloudflare, Namecheap and Porkbun are common choices).</li>
+    <li>Turn on <b>auto-renew</b>, <b>registrar lock</b> and <b>two-factor sign-in</b> on the registrar account. Losing the domain takes every customer offline.</li>
+  </ul>
+
+  <h3>2.2 Rent a small server</h3>
+  <ul>
+    <li>A Linux virtual server (Ubuntu LTS) with <b>2 GB of memory</b> from any mainstream provider (DigitalOcean, Hetzner, Linode/Akamai, Vultr, AWS Lightsail…).</li>
+    <li>Each shop uses about <b>50 MB of memory</b> (measured), so a 2 GB server should run the demo plus roughly 15–20 small shops. Watch memory and upgrade when it gets tight.</li>
+    <li>Secure it on day one: sign in with <b>SSH keys</b> (not passwords), a firewall that only allows ports 22, 80 and 443, automatic security updates, and two-factor sign-in on the hosting account.</li>
+  </ul>
+
+  <h3>2.3 Point the domain at the server</h3>
+  <p>In your registrar's DNS settings, add two <b>A records</b> pointing at the server's IP address: one for <code>demo</code>, and a wildcard
+    <code>*</code>. With the wildcard, new shops need no DNS changes.</p>
+
+  <h3>2.4 Start the demo</h3>
+  <p>Install Docker on the server, copy this project onto it, put your domain into <code>deploy/multi/Caddyfile</code>, then:</p>
+<pre>cd deploy/multi
+docker compose up -d --build</pre>
+  <p>Caddy gets the HTTPS certificate by itself within a minute or two. The demo starts with the sample juice bar.</p>
+
+  <h3>2.5 Create the accounts straight away</h3>
+  <div class="warn"><b>Do this before you share any link</b> On a brand-new copy, whoever opens it first can create the owner account. So create it yourself
+    the moment a copy starts:</div>
+<pre>docker compose exec demo python -m app.auth add yourname owner       # asks for a password
+docker compose exec demo python -m app.auth add demo-manager manager
+docker compose exec demo python -m app.auth add demo-staff staff</pre>
+  <p>Give your salesperson the demo-manager and demo-staff logins, never your owner login.</p>
+
+  <h3>2.6 Reset the demo every night</h3>
+  <p>So every demo starts clean, whatever was clicked the day before. On the server, run <code>crontab -e</code> and add:</p>
+<pre>15 3 * * *  /path/to/project/deploy/multi/reset-demo.sh >> /var/log/menu-demo-reset.log 2>&1</pre>
+  <p>Demo logins and passwords are kept. Run the same script by hand just before an important demo.</p>
+
+  <h3>2.7 Backups and monitoring</h3>
+  <ul class="check">
+    <li>Turn on the hosting provider's <b>weekly server snapshots</b>.</li>
+    <li>Every week, download each shop's <b>full backup</b> (Settings → Backups) and keep it off the server. Shops also get automatic daily copies on the server.</li>
+    <li>Add each address to an <b>uptime monitor</b> (several have free plans) so you hear about an outage before your customers do.</li>
+    <li>Once, practise a <b>restore</b> on the demo (<code>python -m app.backup restore …</code>; see docs/HOSTING.md) so you know it works.</li>
+  </ul>
+
+  <h3>What it costs to run</h3>
+  <table>
+    <tr><th>Item</th><th style="width:30%">Rough cost*</th></tr>
+    <tr><td>Domain</td><td>about $10–25 a year</td></tr>
+    <tr><td>Server (2 GB), demo plus many shops</td><td>about $10–25 a month</td></tr>
+    <tr><td>Business email</td><td>about $5–8 per mailbox a month</td></tr>
+    <tr><td>Uptime monitoring</td><td>free plans available</td></tr>
+    <tr><td>Insurance, registration, lawyer review</td><td>varies: get quotes (section 1, 5)</td></tr>
+  </table>
+  <p class="lead">*Typical prices at the time of writing; check current prices before you budget.</p>
+</section>
+
+<section>
+  <h2><span class="num">3</span>Test it like a customer</h2>
+  <p>Before anyone else sees it, use the live demo exactly as a shop would. Fix or note anything that surprises you.</p>
+  <ul class="check">
+    <li>On your phone, <b>on mobile data</b> (not your Wi-Fi), open https://demo.yourbrand.com. Check the padlock shows and the page loads quickly.</li>
+    <li>Sign in as <b>staff</b> and do every task in the <b>Staff guide</b>: a sale, an allergy check, a delivery with one damaged item, a count, a waste entry, sign out.</li>
+    <li>Sign in as <b>manager</b> and do every task in the <b>Manager guide</b>: reset a staff password, import a till file, create a purchase order, move a shift, read the variance report.</li>
+    <li>Take both <b>knowledge checks</b> yourself without looking. Anything you get wrong, a customer will too: improve the guide.</li>
+    <li>Get a <b>real till export</b> (from your pilot shop, a friend's café, or a free trial of Square, Toast or Clover) and import it. Check the columns and names match.</li>
+    <li>Load a <b>real menu</b> through Excel: download the workbook from an empty copy, fill in Ingredients, Menu Items and Recipes, import it. Time how long it takes: that's your onboarding effort per shop.</li>
+    <li><b>Restore a backup</b> onto the demo (section 2.7).</li>
+    <li>Try it on the <b>tablet</b> a shop would actually use at the counter and at the back door.</li>
+  </ul>
+</section>
+
+<section>
+  <h2><span class="num">4</span>Pilot with one real shop</h2>
+  <p>This is the most important step. A real shop's results are what you (and later your salesperson) will sell, in place of the illustrative estimate in the proposal.</p>
+  <h3>Choose the shop</h3>
+  <ul>
+    <li>Makes drinks or food to <b>recipes</b> from ingredients it buys (juice bar, smoothie or coffee shop, bakery café, small kitchen).</li>
+    <li>One location; uses a <b>till system that exports item sales to CSV</b>.</li>
+    <li>An owner who already feels the pain: waste, running out, not knowing their drink costs, ordering from memory.</li>
+  </ul>
+  <h3>Offer and agree</h3>
+  <ul>
+    <li>Free or heavily discounted for <b>6–8 weeks</b>, in exchange for honest feedback, a weekly 20-minute check-in, a testimonial, and permission to use their before/after numbers (anonymously if they prefer).</li>
+    <li>Put it in a one-page <b>pilot agreement</b> (section 5): dates, what you do, what they do, that their data is theirs, what happens at the end.</li>
+  </ul>
+  <h3>Measure before, then after</h3>
+  <table>
+    <tr><th>Measure</th><th>How to get it before the pilot</th></tr>
+    <tr><td>Food cost %</td><td>Last month's ingredient purchases ÷ sales (from invoices and the till).</td></tr>
+    <tr><td>Waste</td><td>Ask them to note what they throw away for one week.</td></tr>
+    <tr><td>Stock-outs</td><td>How many times a week something runs out ("86'd").</td></tr>
+    <tr><td>Time on admin</td><td>Hours a week spent counting, ordering and scheduling.</td></tr>
+  </table>
+  <p>At the end, compare, write a one-page <b>case study</b>, and update the proposal and brochure with the real figures.</p>
+  <h3>Set up a shop (repeat for every customer)</h3>
+  <ol class="steps">
+    <li>In <code>deploy/multi/docker-compose.yml</code>, copy the commented <b>customer template</b> block; rename it (e.g. <code>sunrise</code>) and its volume.</li>
+    <li>In the <code>Caddyfile</code>, copy the commented block with the same name. Run <code>docker compose up -d</code>.</li>
+    <li><b>Immediately</b> create your owner account and the shop owner's account (section 2.5, with <code>sunrise</code> in place of <code>demo</code>).</li>
+    <li>Collect: menu and recipes, recent supplier invoices, staff list with pay rates, a sample till export.</li>
+    <li>Load the menu through the Excel template (section 3); set reorder points, par levels, yields and allergens; add staff; set the target food cost.</li>
+    <li>Train the owner with the Manager guide and staff with the Staff guide; have everyone take their knowledge check.</li>
+    <li>Check in weekly for the first month.</li>
+  </ol>
+  <p class="lead">When a shop leaves: download their full backup and give it to them (it's their data), then remove their block and volume.</p>
+</section>
+
+<section>
+  <h2><span class="num">5</span>Package, price and paperwork</h2>
+  <h3>Decide the offer</h3>
+  <p>A <b>one-time setup fee</b> (your onboarding time) plus a <b>monthly fee</b> (hosting, backups, updates, support) is easiest to explain.
+    Keep what's included realistic for one person, as you did with the brochure: write it down so nobody, including a salesperson, promises more.</p>
+  <ul>
+    <li><b>Setup</b>: decide what's included, e.g. "we load up to 40 menu items from your completed template and train your team in one session". Anything beyond is extra.</li>
+    <li><b>Support</b>: how customers reach you, your hours, and how fast you reply (e.g. "next business day").</li>
+    <li><b>Monthly price floor</b>: (your support hours per shop per month × your hourly rate) + server share + payment fees, then add a margin. Example: 2 hours × $40 + $2 server + $3 fees = $85 cost, so price comfortably above that.</li>
+  </ul>
+  <h3>Documents to have ready</h3>
+  <table>
+    <tr><th style="width:26%">Document</th><th>Covers</th></tr>
+    <tr><td><b>Service agreement</b></td><td>What you provide; fees and billing; term and cancellation; support hours and reply times; best-effort availability;
+      <b>the customer owns their data</b> and gets a full export on leaving; backups; limit of liability; that costs, reorder suggestions and allergen lists depend on what the shop enters
+      and don't replace their own allergen procedures.</td></tr>
+    <tr><td><b>Pilot agreement</b></td><td>A one-page version for the free or discounted trial (section 4).</td></tr>
+    <tr><td><b>Privacy notice</b></td><td>What personal data you hold (staff names, contact details, pay rates, sign-in records), why, where it's stored, who can see it, how long you keep it.</td></tr>
+    <tr><td><b>Salesperson agreement</b></td><td>Commission terms, what they may and may not promise, confidentiality, ending the arrangement (section 7).</td></tr>
+  </table>
+  <p>Pay a lawyer once to review these as templates; it's far cheaper than fixing a dispute. Then update the proposal's pricing table to match.</p>
+</section>
+
+<section>
+  <h2><span class="num">6</span>Sales kit</h2>
+  <p>Have all of this ready <b>before</b> you hire, so the salesperson sells the same thing you would.</p>
+  <ul class="check">
+    <li><b>Brochure</b> with your real contact details (fill in the placeholders in <code>docs/brochure/brochure.html</code>), printed on good paper.</li>
+    <li><b>Proposal</b> template updated with the pilot's real results and your price sheet.</li>
+    <li><b>Case study</b> from the pilot: one page, before/after numbers, a quote from the owner.</li>
+    <li><b>Demo logins</b> for the salesperson (demo-manager and demo-staff), and a tablet to demo on.</li>
+    <li><b>Demo script</b> (below), <b>qualifying questions</b> and <b>answers to objections</b> (next page).</li>
+    <li>A simple <b>pipeline sheet</b>: shop, contact, till system, stage (contacted, demo booked, demo done, pilot, customer), next step and date.</li>
+    <li>Two short <b>follow-up emails</b>: one the same day as a demo, one a week later.</li>
+  </ul>
+  <h3>The 10-minute demo</h3>
+  <table class="script">
+    <tr><th>Time</th><th>Show</th><th>Say (in your words)</th></tr>
+    <tr><td>0–1</td><td>Ask, don't show</td><td>"How do you know what each drink costs you today? What happens when you run out of something mid-shift?"</td></tr>
+    <tr><td>1–3</td><td>Menu builder: open a drink</td><td>"Here's what this smoothie really costs, ingredient by ingredient, and the price that hits your target. Allergens come from the recipe."</td></tr>
+    <tr><td>3–4</td><td>Till import</td><td>"Each morning you load yesterday's sales from your till. Nobody types anything twice."</td></tr>
+    <tr><td>4–6</td><td>Dashboard → Procurement</td><td>"It tells you what's running low, before it runs out, and builds the order for each supplier."</td></tr>
+    <tr><td>6–7</td><td>Receiving</td><td>"Staff check deliveries off on the tablet: damaged or missing items are recorded, not paid for by surprise."</td></tr>
+    <tr><td>7–8</td><td>Counts &amp; Waste</td><td>"A weekly count shows what went missing, in dollars."</td></tr>
+    <tr><td>8–9</td><td>Schedule</td><td>"Drag shifts around and see labor against sales."</td></tr>
+    <tr><td>9–10</td><td>Settings → Users; Excel</td><td>"Everyone has their own login; it's backed up daily; and it's all in Excel, which you keep." Then ask for a pilot or a follow-up.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h3>Qualifying questions (is this shop a fit?)</h3>
+  <ul>
+    <li>What do you sell that's made from ingredients you buy? Roughly how many items on the menu?</li>
+    <li>Which till system do you use, and can it export item sales? (Square, Toast, Clover and most others can.)</li>
+    <li>How do you order today, and how often do you run out or throw things away?</li>
+    <li>How many staff, and how do you do the schedule?</li>
+    <li>Who would use it day to day, and on what device?</li>
+  </ul>
+  <h3>Objections and honest answers</h3>
+  <table>
+    <tr><th style="width:34%">They say</th><th>You say</th></tr>
+    <tr><td>"My till already does inventory."</td><td>"Most track items sold, not the ingredients inside them. This works out what each drink used, what to reorder from which supplier, and what went missing."</td></tr>
+    <tr><td>"We use spreadsheets."</td><td>"This keeps a live Excel copy for you, but does the arithmetic after every sale, delivery and count, so nobody has to."</td></tr>
+    <tr><td>"There are bigger products for this."</td><td>"Yes, built for bigger operations and priced like it. This is made for one or two shops: simple, quick to set up, and your data stays yours in Excel."</td></tr>
+    <tr><td>"I don't have time to set it up."</td><td>"You fill in a template with your menu and suppliers; we load it and train your team in one session."</td></tr>
+    <tr><td>"Is my data safe?"</td><td>"Your shop runs on its own, separate from every other customer, over HTTPS. Everyone has their own login, it's backed up daily, and you can download everything any time."</td></tr>
+    <tr><td>"What about allergies?"</td><td>"It lists the allergens in every drink from its recipe, so staff can answer quickly. It doesn't know about shared blenders, so it supports your allergy procedure; it doesn't replace it."</td></tr>
+    <tr><td>"It's too expensive."</td><td>Use the pilot's real numbers: what the shop saved in waste and stock-outs each month against the monthly fee.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="num">7</span>Recruit and train a salesperson</h2>
+  <h3>Who to look for</h3>
+  <p>Someone who knows the local café and restaurant scene (a former manager, a supplier rep, a hospitality consultant), is comfortable walking in to introduce themselves, and listens more than they talk.</p>
+  <h3>How to pay them</h3>
+  <ul>
+    <li><b>Commission-only</b> (a share of each new customer's setup fee and first months of subscription) costs nothing until they sell; a <b>small base plus commission</b> attracts steadier people.</li>
+    <li>Pay commission when the <b>customer pays</b>, and take it back if the customer cancels within the first 60–90 days.</li>
+    <li>Check whether they're a contractor or an employee where you are (the rules matter for tax), and put it in a written agreement.</li>
+  </ul>
+  <h3>Rules of engagement (write them down)</h3>
+  <ul>
+    <li>Sell only what's on the price sheet; no discounts or custom features without you.</li>
+    <li>No promised start dates; you confirm onboarding dates.</li>
+    <li>Use the allergen wording above; never say a drink is "allergen-free".</li>
+    <li>They find, qualify, demo and sign; <b>you</b> set up the shop and train it. Handoff: contact, till system, menu size, locations, pain points, hoped-for start date.</li>
+  </ul>
+  <h3>Two-week training plan</h3>
+  <table>
+    <tr><th style="width:20%">When</th><th>What</th></tr>
+    <tr><td>Day 1</td><td>Read the brochure, proposal and case study. Use the demo as staff and as manager, following both guides.</td></tr>
+    <tr><td>Day 2</td><td>Take the <b>Staff</b> and <b>Manager knowledge checks</b>; pass both (10/12 and 13/15). Go over wrong answers together.</td></tr>
+    <tr><td>Days 3–5</td><td>Shadow at least two of your demos. Learn the qualifying questions and the 10-minute script.</td></tr>
+    <tr><td>Week 2</td><td>Role-play every objection with you. Give two demos while you watch, with feedback after each. Then go solo.</td></tr>
+    <tr><td>Every week</td><td>15-minute check-in: demos given, pilots started, customers signed, what shops asked for.</td></tr>
+  </table>
+</section>
+
+<section class="newpage card-ref">
+  <h2>Launch checklist</h2>
+  <div class="cols">
+    <div>
+      <h3>1. Business basics</h3>
+      <ul class="check">
+        <li>Name checked (trademark, .com)</li>
+        <li>Business registered; tax ID</li>
+        <li>Business bank account and bookkeeping</li>
+        <li>Insurance: liability, E&amp;O, cyber</li>
+        <li>Invoicing with monthly billing</li>
+      </ul>
+      <h3>2. Domain and server</h3>
+      <ul class="check">
+        <li>Domain bought; auto-renew, lock, 2FA</li>
+        <li>2 GB server secured (SSH keys, firewall, updates)</li>
+        <li>DNS: demo and * records</li>
+        <li>demo.yourbrand.com live over HTTPS</li>
+        <li>Owner and demo logins created</li>
+        <li>Nightly demo reset in cron</li>
+        <li>Snapshots, weekly backup download, uptime monitor</li>
+        <li>Business email on the domain</li>
+      </ul>
+      <h3>3. Tested like a customer</h3>
+      <ul class="check">
+        <li>Every guide task done on phone and tablet</li>
+        <li>Both knowledge checks passed</li>
+        <li>Real till export imported; real menu loaded</li>
+        <li>Backup restored once</li>
+      </ul>
+    </div>
+    <div>
+      <h3>4. Pilot</h3>
+      <ul class="check">
+        <li>Shop chosen and pilot agreement signed</li>
+        <li>Baseline measured before starting</li>
+        <li>6–8 weeks with weekly check-ins</li>
+        <li>Case study and testimonial written</li>
+      </ul>
+      <h3>5. Offer and paperwork</h3>
+      <ul class="check">
+        <li>Setup and monthly prices decided</li>
+        <li>What's included written down</li>
+        <li>Service agreement, privacy notice</li>
+        <li>Lawyer review done</li>
+      </ul>
+      <h3>6. Sales kit</h3>
+      <ul class="check">
+        <li>Brochure printed with contact details</li>
+        <li>Proposal updated with real results</li>
+        <li>Demo script, questions, objections</li>
+        <li>Pipeline sheet and follow-up emails</li>
+      </ul>
+      <h3>7. Salesperson</h3>
+      <ul class="check">
+        <li>Agreement with commission and rules</li>
+        <li>Both knowledge checks passed</li>
+        <li>Two supervised demos given</li>
+        <li>Weekly check-in booked</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
