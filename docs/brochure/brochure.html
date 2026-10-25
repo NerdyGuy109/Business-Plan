@@ -58,28 +58,19 @@
   .back-head h1 { flex: none; }
   .back-head h1 { font-family: "Inter Display", Inter, sans-serif; font-size: 21pt; font-weight: 750; letter-spacing: -0.3px; line-height: 1.1; }
   .back-head p { font-size: 9pt; color: var(--muted); max-width: 2.7in; text-align: right; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.2in 0.24in; margin-top: 0.26in; }
-  .tile { display: grid; grid-template-columns: 1.9in 1fr; gap: 12px; align-items: start; }
-  .tile .img { width: 1.9in; height: 1.3in; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 4px 10px rgba(0,0,0,.06); background: #f4f7f5; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.36in 0.26in; margin-top: 0.4in; }
+  .tile { display: grid; grid-template-columns: 2.05in 1fr; gap: 13px; align-items: start; }
+  .tile .img { width: 2.05in; height: 1.45in; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 4px 10px rgba(0,0,0,.06); background: #f4f7f5; }
   .tile .img img { width: 100%; height: 100%; object-fit: cover; object-position: left top; display: block; }
   .tile h3 { font-size: 10.5pt; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
   .tile h3 .n { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--green); color: #fff; font-size: 7.5pt; font-weight: 800; flex: none; }
   .tile ul { list-style: none; }
-  .tile li { font-size: 8.4pt; line-height: 1.36; color: #33433b; padding-left: 10px; position: relative; margin-bottom: 2px; }
+  .tile li { font-size: 8.8pt; line-height: 1.4; color: #33433b; padding-left: 10px; position: relative; margin-bottom: 4px; }
   .tile li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 4px; height: 4px; border-radius: 50%; background: var(--green); }
 
-  .cta { position: absolute; left: 0; right: 0; bottom: 0; height: 2.05in; background: var(--green); color: #fff; padding: 0.3in 0.55in;
-    display: grid; grid-template-columns: 1.15fr 1fr; gap: 0.35in; }
-  .cta h2 { font-size: 13pt; font-weight: 750; margin-bottom: 7px; }
-  .cta ul { list-style: none; columns: 2; column-gap: 14px; }
-  .cta li { font-size: 8.6pt; color: #e4f1ea; padding-left: 15px; position: relative; margin-bottom: 5px; break-inside: avoid; }
-  .cta li::before { content: "\2713"; position: absolute; left: 0; color: #ffd7bd; font-weight: 800; }
-  .card { background: #fff; color: var(--ink); border-radius: 12px; padding: 14px 16px; }
-  .card h2 { color: var(--green-dark); font-size: 13pt; }
-  .card p { font-size: 8.8pt; color: var(--muted); }
-  .contact { margin-top: 9px; display: grid; gap: 3px; font-size: 9.5pt; font-weight: 600; }
-  .contact span { color: var(--muted); font-weight: 500; display: inline-block; width: 46px; font-size: 8pt; text-transform: uppercase; letter-spacing: .6px; }
-  .fine { position: absolute; left: 0.55in; right: 0.55in; bottom: 2.13in; font-size: 6.8pt; color: var(--muted); }
+  .back-foot { position: absolute; left: 0.55in; right: 0.55in; bottom: 0.4in; padding-top: 10px; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; font-size: 8.5pt; color: var(--muted); }
+  .back-foot span:first-child { font-weight: 700; color: var(--green); }
 </style>
 </head>
 <body>
@@ -107,13 +98,13 @@
     </div>
 
     <div class="stats">
-      <div class="stat peach"><div class="v">~$3,160</div><div class="l">estimated monthly value for a bar selling 250 drinks a day*</div></div>
-      <div class="stat"><div class="v">7 days</div><div class="l">from kickoff to go-live, set up with your real menu and team</div></div>
-      <div class="stat"><div class="v">100%</div><div class="l">your data, always available as an Excel workbook you keep</div></div>
+      <div class="stat peach"><div class="v">8 tools</div><div class="l">menu, costing, ingredients, sales, ordering, scheduling, dashboard and Excel in one system</div></div>
+      <div class="stat"><div class="v">Live Excel</div><div class="l">a workbook with working formulas, updated after every change</div></div>
+      <div class="stat"><div class="v">Any browser</div><div class="l">runs on the computer you already have; no special hardware</div></div>
     </div>
   </div>
 
-  <div class="foot"><span>*Illustrative estimate from reduced waste, fewer stock-outs, tighter staffing and time saved. Assumptions available on request.</span><span>Turn over &rarr;</span></div>
+  <div class="foot"><span>[Your name] &middot; [Phone] &middot; [Email]</span><span>Turn over &rarr;</span></div>
 </section>
 
 <!-- ================= BACK ================= -->
@@ -159,30 +150,7 @@
     </div>
   </div>
 
-  <div class="fine">Works in any web browser on the computer you already have. No new hardware required.</div>
-
-  <div class="cta">
-    <div>
-      <h2>What&rsquo;s included</h2>
-      <ul>
-        <li>Setup with your real menu and recipes</li>
-        <li>Your suppliers and ingredient costs loaded</li>
-        <li>Your staff and shift times</li>
-        <li>Reorder points tuned to your sales</li>
-        <li>Hands-on staff training</li>
-        <li>Follow-up support after go-live</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h2>See it with your own menu</h2>
-      <p>Book a 30-minute demo. Bring your menu and we&rsquo;ll show you the cost of every drink on the spot.</p>
-      <div class="contact">
-        <div><span>Name</span>[Your name]</div>
-        <div><span>Phone</span>[Phone]</div>
-        <div><span>Email</span>[Email]</div>
-      </div>
-    </div>
-  </div>
+  <div class="back-foot"><span>Menu &amp; Inventory</span><span>[Your name] &middot; [Phone] &middot; [Email]</span></div>
 </section>
 
 </body>
