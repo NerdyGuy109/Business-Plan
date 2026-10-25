@@ -246,6 +246,13 @@ class AuthTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             self.users.update("pat", {"role": "staff"})
 
+    def test_new_password_must_differ_and_clears_temporary_flag(self):
+        self.users.create("sam", "staff-pass-1", role="staff")
+        with self.assertRaises(ValidationError):
+            self.users.change_own_password("sam", "staff-pass-1", "staff-pass-1")
+        self.users.change_own_password("sam", "staff-pass-1", "brand-new-pw")
+        self.assertFalse(self.users.get("sam")["must_change"])
+
     def test_disabling_ends_sessions(self):
         self.users.create("sam", "staff-pass-1", role="staff")
         token, _ = self.users.login("sam", "staff-pass-1", "1.1.1.1")
@@ -298,7 +305,12 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.call(owner, "POST", "/api/ingredients", {"name": "x"}, header=False)[0], 400)
 
         staff = self.client()
-        self.assertEqual(self.call(staff, "POST", "/api/login", {"username": "sam", "password": "staff-pass-1"})[0], 200)
+        status, body = self.call(staff, "POST", "/api/login", {"username": "sam", "password": "staff-pass-1"})
+        self.assertEqual((status, body["user"]["must_change"]), (200, True))
+        status, body = self.call(staff, "POST", "/api/sales", {"lines": [{"item_id": "MI-001", "qty": 1}]})
+        self.assertEqual((status, body.get("must_change")), (403, True))  # temporary password must go first
+        self.assertEqual(self.call(staff, "POST", "/api/me/password",
+                                   {"current": "staff-pass-1", "new": "sams-own-pass"})[0], 200)
         status, state = self.call(staff, "GET", "/api/state")
         self.assertEqual(status, 200)
         rates = {e["id"]: e["hourly_rate"] for e in state["employees"]}
@@ -311,6 +323,26 @@ class ServerTests(unittest.TestCase):
         status, body = self.call(staff, "POST", "/api/waste", {"kind": "ingredient", "ingredient_id": "ING-013",
                                                                "qty": 1, "reason": "damaged"})
         self.assertEqual((status, body["state"]["waste"][0]["by"]), (200, "EMP-003"))
+
+        # managers look after staff accounts, and nothing above them
+        self.assertEqual(self.call(owner, "POST", "/api/users", {"username": "maya", "password": "mgr-pass-123",
+                                                                  "role": "manager"})[0], 200)
+        mgr = self.client()
+        self.call(mgr, "POST", "/api/login", {"username": "maya", "password": "mgr-pass-123"})
+        self.assertEqual(self.call(mgr, "POST", "/api/me/password", {"current": "mgr-pass-123", "new": "mayas-pass-9"})[0], 200)
+        self.assertEqual(self.call(mgr, "PUT", "/api/users/sam", {"password": "reset-pass-1"})[0], 200)
+        self.assertEqual(self.call(mgr, "POST", "/api/users", {"username": "riley", "password": "temp-pass-1",
+                                                                "role": "staff"})[0], 200)
+        self.assertEqual(self.call(mgr, "POST", "/api/users", {"username": "boss", "password": "temp-pass-1",
+                                                                "role": "manager"})[0], 403)
+        self.assertEqual(self.call(mgr, "PUT", "/api/users/pat", {"password": "hijack-pass"})[0], 403)
+        self.assertEqual(self.call(mgr, "PUT", "/api/users/sam", {"role": "owner"})[0], 403)
+        status, state = self.call(mgr, "GET", "/api/state")
+        self.assertEqual(sorted(u["username"] for u in state["users"]), ["maya", "riley", "sam"])
+        # the reset signed Sam out, and the new password is temporary again
+        self.assertEqual(self.call(staff, "GET", "/api/state")[0], 401)
+        status, body = self.call(staff, "POST", "/api/login", {"username": "sam", "password": "reset-pass-1"})
+        self.assertTrue(body["user"]["must_change"])
 
 
 def tearDownModule():

@@ -25,6 +25,14 @@
       <label>Password again <input name="confirm" type="password" autocomplete="new-password" minlength="8" required></label>
       <button class="primary wide">Create account and sign in</button>
     </form>
+    <form id="change-form" hidden>
+      <h2>Choose your own password</h2>
+      <p class="hint">You signed in with a temporary password. Pick a new one that only you know (8 or more characters).</p>
+      <label id="change-current-label">Temporary password <input name="current" type="password" autocomplete="current-password"></label>
+      <label>New password <input name="new" type="password" autocomplete="new-password" minlength="8" required></label>
+      <label>New password again <input name="confirm" type="password" autocomplete="new-password" minlength="8" required></label>
+      <button class="primary wide">Save password and continue</button>
+    </form>
     <div id="login-error" class="bad-text" role="alert"></div>
   </main>
   <script src="/static/login.js"></script>

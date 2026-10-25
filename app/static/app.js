@@ -1318,17 +1318,21 @@ function renderAccount() {
   $("#me-name").textContent = m.name;
   $("#me-role").textContent = m.role;
   $("#me-summary").textContent = `Signed in as ${m.username} (${m.role})` + (empById(m.employee_id) ? ` · linked to ${empById(m.employee_id).name}` : "");
-  if (m.role !== "owner") return;
+  if (m.role === "staff") return;
+  const owner = m.role === "owner";
+  if (!owner) $("#user-role").innerHTML = "<option>staff</option>";
   const empOpts = (sel) => `<option value="">— none —</option>` + S.employees.filter((e) => e.active || e.id === sel)
     .map((e) => `<option value="${esc(e.id)}" ${e.id === sel ? "selected" : ""}>${esc(e.name)}</option>`).join("");
   if (!$("#user-form").contains(document.activeElement)) $("#user-emp").innerHTML = empOpts("");
   $("#users-table").innerHTML = `<tr><th>Name</th><th>Username</th><th>Role</th><th>Employee</th><th>Last sign-in</th><th>Status</th><th></th></tr>` +
     (S.users || []).map((u) => `<tr data-user="${esc(u.username)}" class="${u.active ? "" : "muted"}"><td>${esc(u.name)}</td><td>${esc(u.username)}</td>
-      <td><select class="u-role" ${u.username === m.username ? "disabled" : ""}>${(S.roles || []).map((r) => `<option ${r === u.role ? "selected" : ""}>${r}</option>`).join("")}</select></td>
+      <td>${owner && u.username !== m.username ? `<select class="u-role">${(S.roles || []).map((r) => `<option ${r === u.role ? "selected" : ""}>${r}</option>`).join("")}</select>` : esc(u.role)}</td>
       <td><select class="u-emp">${empOpts(u.employee_id)}</select></td>
-      <td>${esc((u.last_login || "never").replace("T", " "))}</td><td>${u.active ? '<span class="pill good">active</span>' : '<span class="pill">disabled</span>'}</td>
-      <td><button class="ghost small u-reset">Reset password</button>
+      <td>${esc((u.last_login || "never").replace("T", " "))}</td><td>${u.active ? '<span class="pill good">active</span>' : '<span class="pill">disabled</span>'}
+        ${u.must_change && u.active ? '<span class="pill warn">temporary password</span>' : ""}</td>
+      <td>${u.username === m.username ? '<span class="hint">use My account</span>' : '<button class="ghost small u-reset">Reset password</button>'}
         ${u.username === m.username ? "" : `<button class="ghost small u-toggle">${u.active ? "Disable" : "Enable"}</button>`}</td></tr>`).join("");
+  if (!owner) return;
   $("#backups-table").innerHTML = (S.backups || []).length ? `<tr><th>Saved</th><th>File</th><th class="r">Size</th><th></th></tr>` +
     S.backups.slice(0, 15).map((b) => `<tr><td>${esc(b.modified.replace("T", " "))}</td><td>${esc(b.name)}</td><td class="r">${num(b.size / 1024)} KB</td>
       <td><a href="/api/backups/${encodeURIComponent(b.name)}">Download</a></td></tr>`).join("") : `<tr><td class="hint">No automatic backups yet.</td></tr>`;
@@ -1405,6 +1409,7 @@ $("#import-local").addEventListener("click", async () => {
 
 // ------------------------------------------------------------------ boot
 api("GET", "/api/state").then((s) => {
+  if (s.me.must_change) { location.href = "/login#change"; return; }
   S = s;
   document.body.classList.add(`role-${s.me.role}`);
   render();

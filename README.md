@@ -72,7 +72,10 @@ of the drinks that use it, and which drinks are above the target.
 |---|---|
 | Staff | Record sales, receive deliveries, count stock, log waste, view the menu (with allergens) and the schedule. They don't see other people's pay rates. |
 | Manager | Everything day to day: menu, ingredients, ordering, schedule, sales imports, Excel |
-| Owner | Also users, business settings and backups |
+| Owner | Also managers' and owners' accounts, business settings and backups |
+
+Managers can add staff accounts and reset a staff member's forgotten password. Any password set by someone else
+is temporary: the person is asked to choose their own the next time they sign in.
 
 ### Ingredient purchasing fields
 
@@ -151,6 +154,6 @@ opening that file in Chrome and choosing Print → Save as PDF (Letter, margins 
 ```bash
 python -m unittest discover tests
 ```
-27 automated checks cover costing, yields, allergens, price-change tracking, sales, receiving, counts, waste,
+28 automated checks cover costing, yields, allergens, price-change tracking, sales, receiving, counts, waste,
 the POS import, scheduling, the Excel round trip, passwords and lockout, and the web server's role and CSRF
 rules. They run against a throwaway folder and never touch your data.

@@ -3,7 +3,8 @@
 Roles, from least to most access:
   staff    record sales, receive deliveries, counts and waste, see the menu and the schedule
   manager  everything day to day: menu, ingredients, ordering, schedule, imports, Excel
-  owner    also users, settings and backups
+  owner    also managers' and owners' accounts, settings and backups
+(Managers can add staff accounts and reset staff passwords.)
 
 Users live in data/users.json, apart from the catalog, so the catalog and the Excel
 workbook never carry password hashes. Passwords are stored as salted PBKDF2-SHA256.
@@ -98,7 +99,9 @@ class Users:
         return not any(u["active"] for u in self.users)
 
     # ----------------------------------------------------------- changes
-    def create(self, username, password, name="", role="staff", employee_id=""):
+    def create(self, username, password, name="", role="staff", employee_id="", must_change=True):
+        """New account. A password chosen by someone else is temporary: the user must replace it
+        at their first sign-in (must_change)."""
         with self.lock:
             username = _clean_username(username)
             if self.get(username):
@@ -108,12 +111,13 @@ class Users:
             _check_new_password(password)
             user = {"username": username, "name": str(name or username).strip(), "role": role,
                     "employee_id": employee_id or "", "active": True, "password": hash_password(password),
+                    "must_change": bool(must_change),
                     "created": datetime.now().isoformat(timespec="minutes")}
             self.users.append(user)
             self.save()
             return user
 
-    def update(self, username, changes):
+    def update(self, username, changes, keep_token=None):
         with self.lock:
             user = self.get(username)
             if not user:
@@ -133,15 +137,19 @@ class Users:
             if changes.get("password"):
                 _check_new_password(changes["password"])
                 user["password"] = hash_password(changes["password"])
-                self.end_sessions(username)
+                user["must_change"] = bool(changes.get("must_change", True))  # a reset password is temporary
+                self.end_sessions(username, keep=keep_token)
             self.save()
             return user
 
-    def change_own_password(self, username, current, new):
+    def change_own_password(self, username, current, new, keep_token=None):
+        """Signs out the user's other sessions but keeps the one they are using."""
         user = self.get(username)
         if not user or not check_password(current or "", user["password"]):
             raise ValidationError("Current password is not right")
-        return self.update(username, {"password": new})
+        if new == current:
+            raise ValidationError("Choose a password different from the current one")
+        return self.update(username, {"password": new, "must_change": False}, keep_token=keep_token)
 
     # ---------------------------------------------------------- sessions
     def login(self, username, password, ip):
@@ -181,9 +189,9 @@ class Users:
         with self.lock:
             self.sessions.pop(token or "", None)
 
-    def end_sessions(self, username):
+    def end_sessions(self, username, keep=None):
         with self.lock:
-            for t in [t for t, s in self.sessions.items() if s["username"] == username]:
+            for t in [t for t, s in self.sessions.items() if s["username"] == username and t != keep]:
                 del self.sessions[t]
 
 
@@ -193,11 +201,11 @@ def main(argv):
     users = Users()
     if len(argv) >= 3 and argv[0] == "add":
         pw = getpass.getpass("Password: ")
-        users.create(argv[1], pw, name=argv[1], role=argv[2])
+        users.create(argv[1], pw, name=argv[1], role=argv[2], must_change=False)
         print(f"Created {argv[1]} ({argv[2]})")
     elif len(argv) == 2 and argv[0] == "password":
         pw = getpass.getpass("New password: ")
-        users.update(argv[1], {"password": pw, "active": True})
+        users.update(argv[1], {"password": pw, "active": True, "must_change": False})
         print(f"Password changed for {argv[1]}")
     elif argv[:1] == ["list"]:
         for u in users.users:

@@ -45,7 +45,6 @@ STAFF_ROUTES = [
     ("POST", r"/api/logout"),
 ]
 OWNER_ROUTES = [
-    (None, r"/api/users(/[\w.-]+)?"),
     ("PUT", r"/api/settings"),
     ("GET", r"/api/backup\.zip"),
     ("GET", r"/api/backups/[\w.-]+"),
@@ -74,6 +73,8 @@ def snapshot_for(user):
     if user["role"] == "owner":
         snap["users"] = [Users.public(u) for u in users.users]
         snap["backups"] = backup.list_backups()
+    elif user["role"] == "manager":  # managers look after staff accounts
+        snap["users"] = [Users.public(u) for u in users.users if u["role"] == "staff" or u["username"] == user["username"]]
     snap["roles"] = ROLES
     return snap
 
@@ -149,6 +150,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(302, b"", "text/plain", {"Location": "/login"})
             else:
                 self._send(401, {"error": "Please sign in", "login": True})
+            return False
+        if self.user.get("must_change") and method != "GET" and path not in ("/api/me/password", "/api/logout"):
+            self._send(403, {"error": "Choose a new password first", "must_change": True})
             return False
         need = required_role(method, path)
         if RANK[self.user["role"]] < RANK[need]:
@@ -229,7 +233,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/setup" and method == "POST":
                 if not users.needs_setup():
                     return self._send(403, {"error": "Setup is already done. Sign in instead."})
-                users.create(body.get("username"), body.get("password"), body.get("name"), "owner")
+                users.create(body.get("username"), body.get("password"), body.get("name"), "owner", must_change=False)
                 token, user = users.login(body.get("username"), body.get("password"), self._client_ip())
                 return self._send(200, {"user": Users.public(user)}, headers=self._cookie(token, SESSION_HOURS * 3600))
             if not self._authorize(method, path):
@@ -238,15 +242,23 @@ class Handler(BaseHTTPRequestHandler):
                 users.logout(self._token())
                 return self._send(200, {"ok": True}, headers=self._cookie("", 0))
             if path == "/api/me/password":
-                users.change_own_password(self.user["username"], body.get("current"), body.get("new"))
+                users.change_own_password(self.user["username"], body.get("current"), body.get("new"), self._token())
                 return self._send(200, {"ok": True})
             m = re.fullmatch(r"/api/users(?:/([\w.-]+))?", path)
             if m:
+                owner = self.user["role"] == "owner"
+                target = users.get(m.group(1)) if m.group(1) else None
+                if not owner:  # managers: staff accounts only, and they can't change roles
+                    if (target and target["role"] != "staff") or (not target and body.get("role", "staff") != "staff") \
+                            or (target and "role" in body):
+                        return self._send(403, {"error": "Managers can only look after staff accounts"})
                 if method == "POST" and not m.group(1):
                     users.create(body.get("username"), body.get("password"), body.get("name"),
                                  body.get("role", "staff"), body.get("employee_id", ""))
                 elif method == "PUT" and m.group(1):
-                    users.update(m.group(1), body)
+                    if m.group(1) == self.user["username"] and "password" in body:
+                        raise ValidationError("Change your own password under My account")
+                    users.update(m.group(1), {k: v for k, v in body.items() if k != "must_change"})
                 elif method == "DELETE" and m.group(1):
                     if m.group(1) == self.user["username"]:
                         raise ValidationError("You can't disable your own account")
