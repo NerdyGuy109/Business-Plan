@@ -99,3 +99,9 @@ exports/inventory.xlsx  generated workbook
 
 The server listens on `127.0.0.1` only. It has no login, so if you expose it to other
 devices (`--host 0.0.0.0`) do it only on a trusted network.
+
+## Sales materials
+
+`docs/brochure/Menu-Inventory-Brochure.pdf` is a two-page leave-behind (front: the pitch; back: every
+feature with a screenshot). Fill in the contact placeholders in `docs/brochure/brochure.html` and re-render it by
+opening that file in Chrome and choosing Print → Save as PDF (Letter, margins none, background graphics on).

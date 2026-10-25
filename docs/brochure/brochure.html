@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Menu &amp; Inventory brochure</title>
+<style>
+  @page { size: Letter; margin: 0; }
+  :root {
+    --green: #2f7d5b; --green-dark: #1f5a40; --green-soft: #e6f2ec; --ink: #16241d; --muted: #5d6b64;
+    --line: #dbe5df; --peach: #f0884b; --peach-soft: #fdeee4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: Inter, "Liberation Sans", sans-serif; color: var(--ink); font-size: 9.5pt; line-height: 1.4; }
+  .page { width: 8.5in; height: 11in; position: relative; overflow: hidden; page-break-after: always; background: #fff; }
+  .page:last-child { page-break-after: auto; }
+  b, strong { font-weight: 650; }
+
+  /* ---------- front ---------- */
+  .hero { background: var(--green); color: #fff; padding: 0.5in 0.55in 2.35in; position: relative; }
+  .hero::after { content: ""; position: absolute; right: -1.2in; top: -1.4in; width: 4.2in; height: 4.2in; border-radius: 50%;
+    background: rgba(255,255,255,.06); }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 11pt; letter-spacing: .2px; }
+  .mark { width: 22px; height: 22px; border-radius: 6px; background: #fff; color: var(--green); display: grid; place-items: center;
+    font-size: 11pt; font-weight: 800; }
+  .tag { margin-left: auto; font-size: 8.5pt; font-weight: 600; background: rgba(255,255,255,.14); padding: 4px 10px; border-radius: 999px; }
+  .hero h1 { font-family: "Inter Display", Inter, sans-serif; font-size: 30pt; line-height: 1.08; font-weight: 750; letter-spacing: -0.5px;
+    margin-top: 0.38in; max-width: 6.6in; }
+  .hero h1 em { font-style: normal; color: #ffd7bd; }
+  .hero p.sub { font-size: 12pt; line-height: 1.45; margin-top: 12px; max-width: 6.1in; color: #e4f1ea; }
+
+  .shot { position: absolute; left: 0.55in; right: 0.55in; top: 3.25in; border-radius: 10px; overflow: hidden; background: #fff;
+    box-shadow: 0 18px 40px rgba(10, 40, 25, .28), 0 0 0 1px rgba(0,0,0,.06); }
+  .shot .bar { height: 22px; background: #eef2ef; display: flex; align-items: center; gap: 5px; padding: 0 10px; border-bottom: 1px solid var(--line); }
+  .shot .bar i { width: 8px; height: 8px; border-radius: 50%; background: #cfd8d3; display: block; }
+  .shot .bar span { margin-left: 10px; font-size: 7pt; color: var(--muted); background: #fff; border-radius: 5px; padding: 2px 10px; }
+  .shot img { display: block; width: 100%; }
+
+  .front-body { position: absolute; left: 0.55in; right: 0.55in; top: 7.45in; }
+  h2.kicker { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.4px; color: var(--green); font-weight: 750; margin-bottom: 9px; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .step { border-top: 3px solid var(--green); padding-top: 8px; }
+  .step .n { font-size: 8pt; font-weight: 800; color: var(--green); }
+  .step h3 { font-size: 10.5pt; margin: 2px 0 3px; font-weight: 700; }
+  .step p { font-size: 8.6pt; color: var(--muted); line-height: 1.38; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 0.3in; }
+  .stat { background: var(--green-soft); border-radius: 10px; padding: 12px 14px; }
+  .stat .v { font-family: "Inter Display", Inter, sans-serif; font-size: 22pt; font-weight: 750; color: var(--green-dark); line-height: 1.05; }
+  .stat .l { font-size: 8.6pt; color: var(--ink); margin-top: 4px; line-height: 1.35; }
+  .stat.peach { background: var(--peach-soft); }
+  .stat.peach .v { color: #b4561d; }
+  .foot { position: absolute; left: 0.55in; right: 0.55in; bottom: 0.32in; font-size: 7pt; color: var(--muted); display: flex; justify-content: space-between; }
+
+  /* ---------- back ---------- */
+  .back { padding: 0.5in 0.55in 0; }
+  .back-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .back-head h1 { flex: none; }
+  .back-head h1 { font-family: "Inter Display", Inter, sans-serif; font-size: 21pt; font-weight: 750; letter-spacing: -0.3px; line-height: 1.1; }
+  .back-head p { font-size: 9pt; color: var(--muted); max-width: 2.7in; text-align: right; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.2in 0.24in; margin-top: 0.26in; }
+  .tile { display: grid; grid-template-columns: 1.9in 1fr; gap: 12px; align-items: start; }
+  .tile .img { width: 1.9in; height: 1.3in; border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 4px 10px rgba(0,0,0,.06); background: #f4f7f5; }
+  .tile .img img { width: 100%; height: 100%; object-fit: cover; object-position: left top; display: block; }
+  .tile h3 { font-size: 10.5pt; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+  .tile h3 .n { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--green); color: #fff; font-size: 7.5pt; font-weight: 800; flex: none; }
+  .tile ul { list-style: none; }
+  .tile li { font-size: 8.4pt; line-height: 1.36; color: #33433b; padding-left: 10px; position: relative; margin-bottom: 2px; }
+  .tile li::before { content: ""; position: absolute; left: 0; top: 0.55em; width: 4px; height: 4px; border-radius: 50%; background: var(--green); }
+
+  .cta { position: absolute; left: 0; right: 0; bottom: 0; height: 2.05in; background: var(--green); color: #fff; padding: 0.3in 0.55in;
+    display: grid; grid-template-columns: 1.15fr 1fr; gap: 0.35in; }
+  .cta h2 { font-size: 13pt; font-weight: 750; margin-bottom: 7px; }
+  .cta ul { list-style: none; columns: 2; column-gap: 14px; }
+  .cta li { font-size: 8.6pt; color: #e4f1ea; padding-left: 15px; position: relative; margin-bottom: 5px; break-inside: avoid; }
+  .cta li::before { content: "\2713"; position: absolute; left: 0; color: #ffd7bd; font-weight: 800; }
+  .card { background: #fff; color: var(--ink); border-radius: 12px; padding: 14px 16px; }
+  .card h2 { color: var(--green-dark); font-size: 13pt; }
+  .card p { font-size: 8.8pt; color: var(--muted); }
+  .contact { margin-top: 9px; display: grid; gap: 3px; font-size: 9.5pt; font-weight: 600; }
+  .contact span { color: var(--muted); font-weight: 500; display: inline-block; width: 46px; font-size: 8pt; text-transform: uppercase; letter-spacing: .6px; }
+  .fine { position: absolute; left: 0.55in; right: 0.55in; bottom: 2.13in; font-size: 6.8pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ================= FRONT ================= -->
+<section class="page">
+  <div class="hero">
+    <div class="brand"><div class="mark">M</div> Menu &amp; Inventory <span class="tag">For juice bars, caf&eacute;s &amp; small kitchens</span></div>
+    <h1>Know what every drink costs, what to reorder, and <em>who&rsquo;s on shift.</em></h1>
+    <p class="sub">One simple system that connects your menu, ingredients, suppliers and staff, and keeps a live Excel copy of all of it.</p>
+  </div>
+
+  <div class="shot">
+    <div class="bar"><i></i><i></i><i></i><span>Dashboard &middot; what needs attention today</span></div>
+    <img src="img/hero.jpg" alt="Dashboard">
+  </div>
+
+  <div class="front-body">
+    <h2 class="kicker">How it works</h2>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Build your menu</h3><p>Click ingredients into each recipe. Cost, margin and food-cost % appear instantly.</p></div>
+      <div class="step"><div class="n">02</div><h3>Ring up sales</h3><p>Every drink sold deducts its exact ingredients from stock, automatically.</p></div>
+      <div class="step"><div class="n">03</div><h3>Reorder on time</h3><p>Low items land on a supplier-ready order list before they run out.</p></div>
+      <div class="step"><div class="n">04</div><h3>Schedule the team</h3><p>Drag shifts into place and see labor cost next to the day&rsquo;s sales.</p></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat peach"><div class="v">~$3,160</div><div class="l">estimated monthly value for a bar selling 250 drinks a day*</div></div>
+      <div class="stat"><div class="v">7 days</div><div class="l">from kickoff to go-live, set up with your real menu and team</div></div>
+      <div class="stat"><div class="v">100%</div><div class="l">your data, always available as an Excel workbook you keep</div></div>
+    </div>
+  </div>
+
+  <div class="foot"><span>*Illustrative estimate from reduced waste, fewer stock-outs, tighter staffing and time saved. Assumptions available on request.</span><span>Turn over &rarr;</span></div>
+</section>
+
+<!-- ================= BACK ================= -->
+<section class="page">
+  <div class="back">
+    <div class="back-head">
+      <h1>Everything a busy counter needs,<br>in one place</h1>
+      <p>Screens shown are from the working system, loaded with a sample juice bar: 12 drinks, 31 ingredients, 9 suppliers and 6 staff.</p>
+    </div>
+
+    <div class="grid">
+      <div class="tile"><div class="img"><img src="img/dashboard.jpg" alt=""></div><div>
+        <h3><span class="n">1</span>Live dashboard</h3>
+        <ul><li>Reorder alerts with days of stock left</li><li>Warns when stock runs out before a delivery could arrive</li><li>Labor cost this week as % of sales</li></ul></div></div>
+
+      <div class="tile"><div class="img"><img src="img/builder.jpg" alt=""></div><div>
+        <h3><span class="n">2</span>Menu builder</h3>
+        <ul><li>Photo, description and recipe in minutes</li><li>Live cost, margin and &ldquo;can make now&rdquo; count</li><li>Suggested prices at 25% or 30% food cost</li></ul></div></div>
+
+      <div class="tile"><div class="img"><img src="img/menu.jpg" alt=""></div><div>
+        <h3><span class="n">3</span>Menu at a glance</h3>
+        <ul><li>Every drink with price, ingredients and margin</li><li>Drinks over target food cost flagged</li><li>See which ingredient limits each drink</li></ul></div></div>
+
+      <div class="tile"><div class="img"><img src="img/ingredients.jpg" alt=""></div><div>
+        <h3><span class="n">4</span>Ingredients &amp; suppliers</h3>
+        <ul><li>Pack size, cost, shipping, lead time, shelf life, minimum order</li><li>True landed cost per oz, piece or scoop</li><li>Which drinks use each ingredient</li></ul></div></div>
+
+      <div class="tile"><div class="img"><img src="img/sell.jpg" alt=""></div><div>
+        <h3><span class="n">5</span>Sales that update stock</h3>
+        <ul><li>Tap drinks onto a ticket</li><li>See exactly which ingredients it will use</li><li>Stock deducted the moment the sale is recorded</li></ul></div></div>
+
+      <div class="tile"><div class="img"><img src="img/procurement.jpg" alt=""></div><div>
+        <h3><span class="n">6</span>Procurement &amp; ordering</h3>
+        <ul><li>Reorder list grouped by supplier</li><li>Package counts to refill to par, with order totals</li><li>One-click purchase orders; receive to restock</li></ul></div></div>
+
+      <div class="tile"><div class="img"><img src="img/schedule.jpg" alt=""></div><div>
+        <h3><span class="n">7</span>Staff scheduler</h3>
+        <ul><li>Drag-and-drop weekly schedule; copy last week</li><li>Flags overtime, double-booking and open shifts</li><li>Labor cost and labor % by day</li></ul></div></div>
+
+      <div class="tile"><div class="img"><img src="img/excel.jpg" alt=""></div><div>
+        <h3><span class="n">8</span>Live Excel workbook</h3>
+        <ul><li>Updated after every change, with live formulas</li><li>Where-used matrix, procurement and weekly hours</li><li>Edit in Excel and import changes back</li></ul></div></div>
+    </div>
+  </div>
+
+  <div class="fine">Works in any web browser on the computer you already have. No new hardware required.</div>
+
+  <div class="cta">
+    <div>
+      <h2>What&rsquo;s included</h2>
+      <ul>
+        <li>Setup with your real menu and recipes</li>
+        <li>Your suppliers and ingredient costs loaded</li>
+        <li>Your staff and shift times</li>
+        <li>Reorder points tuned to your sales</li>
+        <li>Hands-on staff training</li>
+        <li>Follow-up support after go-live</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>See it with your own menu</h2>
+      <p>Book a 30-minute demo. Bring your menu and we&rsquo;ll show you the cost of every drink on the spot.</p>
+      <div class="contact">
+        <div><span>Name</span>[Your name]</div>
+        <div><span>Phone</span>[Phone]</div>
+        <div><span>Email</span>[Email]</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
