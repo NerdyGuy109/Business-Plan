@@ -15,6 +15,7 @@
       <button data-tab="ingredients">Ingredients</button>
       <button data-tab="sell">Record Sales</button>
       <button data-tab="procurement">Procurement</button>
+      <button data-tab="receiving">Receiving</button>
       <button data-tab="schedule">Schedule</button>
       <button data-tab="excel">Excel</button>
     </nav>
@@ -90,6 +91,23 @@
       <div class="card">
         <h2>Purchase orders</h2>
         <div id="po-list"></div>
+      </div>
+    </section>
+
+    <!-- Receiving -->
+    <section id="tab-receiving" class="tab">
+      <p class="hint">When a delivery arrives: pick its order, check each item against what's in the box, note any damage or
+        shortage, then submit. Good items are added to stock; anything missing stays on order.</p>
+      <div class="grid-recv">
+        <div>
+          <input id="recv-search" type="search" placeholder="Find PO # or supplier…" class="wide-input">
+          <div id="recv-list" class="recv-list"></div>
+        </div>
+        <div id="recv-panel" class="card"></div>
+      </div>
+      <div class="card">
+        <h2>Receiving log</h2>
+        <div id="recv-log"></div>
       </div>
     </section>
 

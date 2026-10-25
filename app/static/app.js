@@ -69,6 +69,7 @@ function render() {
   renderSell();
   renderProcurement();
   renderSchedule();
+  renderReceiving();
   if ($("#item-dialog").open) renderBuilder();
 }
 
@@ -112,6 +113,12 @@ function renderDashboard() {
     ["Items out of stock", out.length, out.map((i) => i.name).join(", ") || "all available", out.length ? "bad" : ""],
     ["Stock value", money(value), "at landed cost"],
     ["Avg ingredient cost", pct(avgCost), "of menu price"],
+    ...(() => {
+      const due = openPOs().filter((p) => p.expected <= todayIso());
+      const late = due.filter((p) => p.expected < todayIso());
+      return [["Deliveries due", due.length, late.length ? `${late.length} overdue` : due.length ? "check in on Receiving" : "none today",
+        late.length ? "bad" : due.length ? "warn" : ""]];
+    })(),
     ...(() => {
       const W = weekStats(mondayOf(todayIso()));
       const openCount = W.shifts.filter((s) => !s.employee_id).length;
@@ -496,11 +503,12 @@ function renderProcurement() {
   $("#po-list").innerHTML = pos.length ? `<table class="data compact"><tr><th>PO</th><th>Supplier</th><th>Created</th><th>Expected</th>
     <th>Lines</th><th class="r">Total</th><th>Status</th><th></th></tr>` + pos.map((po) => {
       const total = po.lines.reduce((a, l) => a + l.packages * (l.package_cost + l.shipping_cost), 0);
-      const lines = po.lines.map((l) => `${l.packages} × ${esc(ingById(l.ingredient_id)?.name || l.ingredient_id)}`).join(", ");
+      const lines = po.lines.map((l) => `${l.received && l.received !== l.packages ? `${l.received}/` : ""}${l.packages} × ${esc(ingById(l.ingredient_id)?.name || l.ingredient_id)}`).join(", ");
+      const open = po.status === "open" || po.status === "partial";
       return `<tr><td>${esc(po.id)}</td><td>${esc(po.supplier)}</td><td>${esc(po.created)}</td><td>${esc(po.received || po.expected)}</td>
-        <td>${lines}</td><td class="r">${money(total)}</td><td><span class="pill ${po.status === "open" ? "warn" : po.status === "received" ? "good" : ""}">${esc(po.status)}</span></td>
-        <td>${po.status === "open" ? `<button class="primary small" data-recv="${esc(po.id)}">Mark received</button>
-          <button class="ghost small" data-cancel="${esc(po.id)}">Cancel</button>` : ""}</td></tr>`;
+        <td>${lines}</td><td class="r">${money(total)}</td><td>${poStatusPill(po)}</td>
+        <td>${open ? `<button class="primary small" data-recv="${esc(po.id)}">Receive…</button>` : ""}
+          ${po.status === "open" ? `<button class="ghost small" data-cancel="${esc(po.id)}">Cancel</button>` : ""}</td></tr>`;
     }).join("") + `</table>` : `<p class="hint">No purchase orders yet.</p>`;
 }
 $("#proc-suppliers").addEventListener("input", (e) => {
@@ -522,7 +530,7 @@ $("#proc-suppliers").addEventListener("click", async (e) => {
 $("#po-list").addEventListener("click", async (e) => {
   const { recv, cancel } = e.target.dataset;
   try {
-    if (recv) { await api("POST", `/api/purchase-orders/${recv}/receive`); toast(`${recv} received — stock added`); }
+    if (recv) return openReceiving(recv);
     if (cancel && confirm(`Cancel ${cancel}?`)) { await api("POST", `/api/purchase-orders/${cancel}/cancel`); }
   } catch (err) { toast(err.message, true); }
 });
@@ -782,6 +790,223 @@ $("#emp-remove").addEventListener("click", async () => {
     toast(`${editingEmp.name} removed` + (res.opened_shifts ? ` — ${res.opened_shifts} shifts are now open` : ""));
   } catch (err) { toast(err.message, true); }
 });
+
+// --------------------------------------------------------------- receiving
+let recvPO = null;      // id of the order being checked in
+let recvDraft = null;   // what the staff member has entered so far
+const nowLocal = () => { const d = new Date(); return `${isoOf(d)}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const daysBetween = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const openPOs = () => S.purchase_orders.filter((p) => p.status === "open" || p.status === "partial");
+
+function poStatusPill(po) {
+  if (po.status === "partial") return `<span class="pill warn">partly received</span>`;
+  if (po.status === "received") return `<span class="pill ${po.short ? "warn" : "good"}">received${po.short ? " (short)" : ""}</span>`;
+  if (po.status === "open") return `<span class="pill warn">open</span>`;
+  return `<span class="pill">${esc(po.status)}</span>`;
+}
+function dueBadge(po) {
+  const d = daysBetween(todayIso(), po.expected);
+  if (d < 0) return `<span class="pill bad">${-d} day${d === -1 ? "" : "s"} late</span>`;
+  if (d === 0) return `<span class="pill warn">due today</span>`;
+  return `<span class="pill">due in ${d} day${d === 1 ? "" : "s"}</span>`;
+}
+
+function openReceiving(poId) {
+  $('#tabs [data-tab="receiving"]').click();
+  selectPO(poId);
+}
+
+function selectPO(poId) {
+  const po = S.purchase_orders.find((p) => p.id === poId);
+  recvPO = po ? po.id : null;
+  recvDraft = po && {
+    received_by: "", received_at: nowLocal(), reference: "", package_damaged: false, wrong_items: false, notes: "", close_short: false,
+    lines: Object.fromEntries(po.lines.filter((l) => l.outstanding > 0).map((l) => [l.ingredient_id, { ok: false, good: 0, damaged: 0, note: "" }])),
+  };
+  renderReceiving();
+}
+
+function renderReceiving() {
+  const q = $("#recv-search").value.toLowerCase();
+  const list = openPOs().filter((p) => !q || `${p.id} ${p.supplier}`.toLowerCase().includes(q))
+    .sort((a, b) => a.expected.localeCompare(b.expected));
+  $("#recv-list").innerHTML = list.map((po) => {
+    const left = po.lines.reduce((a, l) => a + l.outstanding, 0);
+    return `<button class="recv-card ${po.id === recvPO ? "on" : ""}" data-po="${esc(po.id)}">
+      <div class="rc-top"><b>${esc(po.id)}</b>${dueBadge(po)}</div>
+      <div>${esc(po.supplier)}</div>
+      <div class="hint">${plural(po.lines.filter((l) => l.outstanding).length, "item")} · ${plural(left, "package")} expected
+        ${po.status === "partial" ? " · partly received" : ""}${po.delays.length ? " · delay logged" : ""}</div></button>`;
+  }).join("") || `<p class="hint">No deliveries expected.</p>`;
+  if (recvPO && !openPOs().some((p) => p.id === recvPO)) { recvPO = null; recvDraft = null; }
+  renderRecvPanel();
+  renderRecvLog();
+}
+
+function renderRecvPanel() {
+  const po = S.purchase_orders.find((p) => p.id === recvPO);
+  if (!po) {
+    $("#recv-panel").innerHTML = `<div class="recv-empty"><h2>Check in a delivery</h2><p class="hint">Choose the order on the left that matches the packing slip or invoice.</p></div>`;
+    return;
+  }
+  const staff = S.employees.filter((e) => e.active);
+  const rows = po.lines.filter((l) => l.outstanding > 0).map((l) => {
+    const ing = ingById(l.ingredient_id) || { name: l.ingredient_id, unit: "", package_qty: 1, package_desc: "" };
+    const d = recvDraft.lines[l.ingredient_id];
+    return `<tr data-ing="${esc(l.ingredient_id)}">
+      <td><b>${esc(ing.name)}</b><div class="hint">${esc(ing.package_desc || "package")} · ${num(ing.package_qty)}${ing.unit === "each" ? "" : " " + esc(ing.unit)} per package</div>
+        ${l.received ? `<div class="hint">${l.received} of ${l.packages} already received</div>` : ""}</td>
+      <td class="r big">${l.outstanding}</td>
+      <td class="c"><input type="checkbox" class="rl-ok" ${d.ok ? "checked" : ""} aria-label="All arrived OK"></td>
+      <td><input type="number" min="0" max="${l.outstanding}" step="1" class="rl-good" value="${d.good}"></td>
+      <td><input type="number" min="0" step="1" class="rl-dmg" value="${d.damaged}"></td>
+      <td><input class="rl-note" placeholder="e.g. lid cracked" value="${esc(d.note)}"></td>
+      <td class="rl-state"></td></tr>`;
+  }).join("");
+  $("#recv-panel").innerHTML = `
+    <div class="toolbar tight"><h2>${esc(po.id)} · ${esc(po.supplier)}</h2><span class="spacer"></span>${dueBadge(po)}</div>
+    <div class="hint">Ordered ${esc(po.created)} · expected ${esc(po.expected)}${po.receipts.length ? ` · ${po.receipts.length} earlier delivery` : ""}</div>
+    ${po.delays.map((d) => `<div class="delay-note">Delay logged ${esc(d.at.replace("T", " "))}: ${esc(d.note)}${d.expected !== d.previous_expected ? ` (new date ${esc(d.expected)})` : ""}</div>`).join("")}
+    <div class="three recv-fields">
+      <label>Received by <select id="rv-by"><option value="">— choose —</option>${staff.map((e) => `<option value="${esc(e.id)}" ${recvDraft.received_by === e.id ? "selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
+      <label>Date &amp; time received <input type="datetime-local" id="rv-at" value="${esc(recvDraft.received_at)}"></label>
+      <label>Tracking / invoice # <input id="rv-ref" value="${esc(recvDraft.reference)}" placeholder="optional"></label>
+    </div>
+    <button type="button" class="ghost" id="rv-all">&#10003; Everything arrived in good condition</button>
+    <div class="table-wrap"><table class="data compact recv-table">
+      <tr><th>Item</th><th class="r">Expected (pkgs)</th><th class="c">All OK</th><th>Received OK</th><th>Damaged</th><th>Note</th><th></th></tr>
+      ${rows}</table></div>
+    <div class="recv-checks">
+      <span id="rv-late"></span>
+      <label class="check"><input type="checkbox" id="rv-boxdmg" ${recvDraft.package_damaged ? "checked" : ""}> Outer packaging damaged</label>
+      <label class="check"><input type="checkbox" id="rv-wrong" ${recvDraft.wrong_items ? "checked" : ""}> Wrong or extra items in the delivery</label>
+    </div>
+    <label>Delivery notes <textarea id="rv-notes" rows="2" placeholder="Anything the manager should know: driver, condition, who was called…">${esc(recvDraft.notes)}</textarea></label>
+    <label class="check" id="rv-close-wrap"><input type="checkbox" id="rv-close" ${recvDraft.close_short ? "checked" : ""}> Nothing else is coming — close this order short</label>
+    <div class="calc" id="rv-summary"></div>
+    <div class="row-gap"><button class="primary" id="rv-submit">Submit receipt</button></div>
+    <details class="delay-box"><summary>Delivery delayed? Log it</summary>
+      <div class="two">
+        <label>What happened <input id="dl-note" placeholder="e.g. supplier called, truck delayed"></label>
+        <label>New expected date <input type="date" id="dl-date" value="${esc(po.expected)}"></label>
+      </div>
+      <button class="ghost" id="dl-save">Log delay</button>
+    </details>`;
+  updateRecvSummary();
+}
+
+// Row badges, late flag and the stock summary, without re-rendering the inputs being typed in.
+function updateRecvSummary() {
+  const po = S.purchase_orders.find((p) => p.id === recvPO);
+  if (!po) return;
+  const adds = [], still = [];
+  let anyShort = false;
+  for (const l of po.lines.filter((x) => x.outstanding > 0)) {
+    const d = recvDraft.lines[l.ingredient_id];
+    const ing = ingById(l.ingredient_id) || { name: l.ingredient_id, unit: "", package_qty: 1 };
+    const short = l.outstanding - d.good;
+    if (short > 0) { anyShort = true; still.push(`${short} × ${ing.name}`); }
+    if (d.good) adds.push(`${esc(ing.name)} <b>+${num(d.good * ing.package_qty)} ${esc(ing.unit)}</b>`);
+    const tags = [];
+    if (d.good === l.outstanding && !d.damaged) tags.push(`<span class="pill good">OK</span>`);
+    if (d.damaged) tags.push(`<span class="pill bad">${d.damaged} damaged</span>`);
+    if (short > 0 && (d.good || d.damaged)) tags.push(`<span class="pill warn">${short} not received</span>`);
+    const cell = $(`#recv-panel tr[data-ing="${l.ingredient_id}"] .rl-state`);
+    if (cell) cell.innerHTML = tags.join(" ");
+  }
+  const at = recvDraft.received_at ? recvDraft.received_at.slice(0, 10) : todayIso();
+  const late = daysBetween(po.expected, at);
+  $("#rv-late").innerHTML = late > 0 ? `<span class="pill bad">Arrived ${late} day${late === 1 ? "" : "s"} late</span>` : `<span class="pill good">On time</span>`;
+  $("#rv-close-wrap").hidden = !anyShort;
+  if (!anyShort) recvDraft.close_short = false;
+  $("#rv-summary").innerHTML = (adds.length ? `Adds to stock: ${adds.join(" · ")}` : "Nothing will be added to stock yet.") +
+    (anyShort ? `<div class="${recvDraft.close_short ? "bad-text" : ""}">${recvDraft.close_short ? "Closing short — not coming: " : "Still on order afterwards: "}${esc(still.join(", "))}</div>` : "") +
+    `<div>Order will be marked <b>${!anyShort ? "received" : recvDraft.close_short ? "received (short)" : "partly received"}</b>.</div>`;
+}
+
+$("#recv-search").addEventListener("input", renderReceiving);
+$("#recv-list").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-po]");
+  if (b) selectPO(b.dataset.po);
+});
+$("#recv-panel").addEventListener("input", (e) => {
+  const t = e.target;
+  const row = t.closest("tr[data-ing]");
+  if (row) {
+    const l = S.purchase_orders.find((p) => p.id === recvPO).lines.find((x) => x.ingredient_id === row.dataset.ing);
+    const d = recvDraft.lines[row.dataset.ing];
+    if (t.matches(".rl-ok")) {
+      d.ok = t.checked;
+      d.good = t.checked ? l.outstanding : 0;
+      if (t.checked) d.damaged = 0;
+      $(".rl-good", row).value = d.good;
+      $(".rl-dmg", row).value = d.damaged;
+    } else if (t.matches(".rl-good")) {
+      d.good = Math.min(Math.max(parseInt(t.value) || 0, 0), l.outstanding);
+      d.ok = d.good === l.outstanding && !d.damaged;
+      $(".rl-ok", row).checked = d.ok;
+    } else if (t.matches(".rl-dmg")) {
+      d.damaged = Math.max(parseInt(t.value) || 0, 0);
+      d.ok = d.good === l.outstanding && !d.damaged;
+      $(".rl-ok", row).checked = d.ok;
+    } else if (t.matches(".rl-note")) d.note = t.value;
+  } else {
+    const map = { "rv-by": "received_by", "rv-at": "received_at", "rv-ref": "reference", "rv-notes": "notes" };
+    if (map[t.id]) recvDraft[map[t.id]] = t.value;
+    if (t.id === "rv-boxdmg") recvDraft.package_damaged = t.checked;
+    if (t.id === "rv-wrong") recvDraft.wrong_items = t.checked;
+    if (t.id === "rv-close") recvDraft.close_short = t.checked;
+  }
+  updateRecvSummary();
+});
+$("#recv-panel").addEventListener("click", async (e) => {
+  const po = S.purchase_orders.find((p) => p.id === recvPO);
+  if (!po) return;
+  if (e.target.id === "rv-all") {
+    for (const l of po.lines.filter((x) => x.outstanding > 0)) Object.assign(recvDraft.lines[l.ingredient_id], { ok: true, good: l.outstanding, damaged: 0 });
+    renderRecvPanel();
+  }
+  if (e.target.id === "rv-submit") {
+    if (S.employees.some((x) => x.active) && !recvDraft.received_by) return toast("Choose who received the delivery", true);
+    const lines = Object.entries(recvDraft.lines).map(([ingredient_id, d]) => ({ ingredient_id, good: d.good, damaged: d.damaged, note: d.note }));
+    if (!lines.some((l) => l.good || l.damaged) && !recvDraft.close_short) return toast("Tick the items that arrived, or log a delay instead", true);
+    if (!confirm(`Submit receipt for ${po.id}? Stock will be updated.`)) return;
+    try {
+      const res = await api("POST", `/api/purchase-orders/${po.id}/receive`, { ...recvDraft, lines });
+      const after = S.purchase_orders.find((p) => p.id === po.id);
+      toast(after.status === "partial" ? `${po.id} partly received — the rest stays on order` : `${po.id} received — stock updated (${res.receipt.id})`);
+      recvPO = null; recvDraft = null;
+      renderReceiving();
+    } catch (err) { toast(err.message, true); }
+  }
+  if (e.target.id === "dl-save") {
+    try {
+      await api("POST", `/api/purchase-orders/${po.id}/delay`, { note: $("#dl-note").value, expected: $("#dl-date").value });
+      toast(`Delay logged for ${po.id}`);
+    } catch (err) { toast(err.message, true); }
+  }
+});
+
+function renderRecvLog() {
+  const all = S.purchase_orders.flatMap((po) => po.receipts.map((rc) => ({ rc, po })))
+    .sort((a, b) => b.rc.received_at.localeCompare(a.rc.received_at) || b.rc.id.localeCompare(a.rc.id)).slice(0, 25);
+  $("#recv-log").innerHTML = all.length ? `<table class="data compact"><tr><th>Received</th><th>Order</th><th>By</th><th>Result</th><th>Notes</th></tr>` +
+    all.map(({ rc, po }) => {
+      const dmg = rc.lines.reduce((a, l) => a + l.damaged, 0);
+      const short = rc.lines.reduce((a, l) => a + Math.max(l.expected - l.good, 0), 0);
+      const tags = [];
+      if (!dmg && !short) tags.push(`<span class="pill good">all OK</span>`);
+      if (dmg) tags.push(`<span class="pill bad">${dmg} damaged</span>`);
+      if (short) tags.push(`<span class="pill warn">${short} short${rc.closed_short ? ", closed" : ""}</span>`);
+      if (rc.late) tags.push(`<span class="pill bad">late</span>`);
+      if (rc.package_damaged) tags.push(`<span class="pill bad">box damaged</span>`);
+      if (rc.wrong_items) tags.push(`<span class="pill bad">wrong items</span>`);
+      const notes = [rc.notes, ...rc.lines.filter((l) => l.note).map((l) => `${ingById(l.ingredient_id)?.name || l.ingredient_id}: ${l.note}`)].filter(Boolean);
+      return `<tr><td>${esc(rc.received_at.replace("T", " "))}</td><td>${esc(po.id)} · ${esc(po.supplier)}${rc.reference ? `<div class="hint">${esc(rc.reference)}</div>` : ""}</td>
+        <td>${esc(empById(rc.received_by)?.name || "–")}</td><td>${tags.join(" ")}</td><td class="hint">${notes.map(esc).join("<br>")}</td></tr>`;
+    }).join("") + `</table>` : `<p class="hint">No deliveries checked in yet.</p>`;
+}
 
 // ------------------------------------------------------------------ excel
 $("#import-upload").addEventListener("click", async () => {

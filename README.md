@@ -42,7 +42,8 @@ Both overwrite `data/catalog.json`.
 | **Menu item builder** | Drop in a picture, fill in name/price/description, then click ingredients to add them (click again for more, or type a name and press Enter). Adjust quantities with − / +. Cost, margin, cost % and "can make now" update live, with suggested prices for 25% and 30% food cost. *Duplicate as new* makes variations fast (e.g. a large size or a protein version). Missing an ingredient? *+ New ingredient* creates it and drops it into the recipe. |
 | **Ingredients** | All parts with package, cost, landed unit cost, lead time, shelf life, stock, reorder point / par level, recent daily usage and which items use them. Click a row to edit. Deleting is blocked while an ingredient is still in a recipe. |
 | **Record Sales** | Tap items onto a ticket and record the sale. Every ingredient in each recipe is deducted from stock. |
-| **Procurement** | Ingredients at or below their reorder point, grouped by supplier, with suggested package counts (editable). *Create purchase order* → *Mark received* when it arrives adds the stock. |
+| **Procurement** | Ingredients at or below their reorder point, grouped by supplier, with suggested package counts (editable). *Create purchase order*; *Receive…* opens it on the Receiving tab. |
+| **Receiving** | Check in a delivery: pick the order (overdue and due-today orders are flagged), choose who received it, confirm the date/time and tracking or invoice number, then tick each item that arrived in good condition or enter how many arrived OK and how many were damaged, with a note. Flag damaged outer packaging or wrong items and add delivery notes. Submitting adds the good packages to stock; missing or damaged items stay on order (the order shows as *partly received*) unless you tick "nothing else is coming" to close it short. *Log a delay* records what the supplier said and a new expected date. Every delivery appears in the receiving log. |
 | **Schedule** | Weekly staff schedule. Drag a shift to move it to another person or day (hold Ctrl/Alt to copy), click an empty spot to add one, click a name to edit that employee. Shows hours vs. each person's max, labor cost, sales and labor % per day, open shifts and double-bookings. *Copy last week* starts a new week from the previous one. Removing an employee keeps their past shifts for labor history and turns their upcoming shifts into open shifts. |
 | **Excel** | Download the workbook, or import an edited one. |
 
@@ -67,7 +68,9 @@ Both overwrite `data/catalog.json`.
 | Recipes | The item ↔ ingredient associations: one row per ingredient per item with quantity. Names, units and costs are looked up by formula. |
 | Where Used | Matrix of every ingredient × every menu item showing the quantity used. |
 | Procurement | Every ingredient grouped by supplier, REORDER rows highlighted, order totals and expected arrival dates. |
-| Purchase Orders, Sales Log | History from the website. |
+| Purchase Orders | Each order line with packages ordered, received OK, damaged and still outstanding. |
+| Receiving Log | Every delivery checked in: when, who, tracking/invoice #, late, damage, shortages and notes. |
+| Sales Log | Sales recorded on the website. |
 | Staff | Employees with role, hourly rate and max hours per week. |
 | Schedule | One row per shift: date, employee (OPEN if unassigned), start/end, hours and labor cost. |
 | Weekly Hours | Hours per employee per day for one week, with totals, labor cost and over-max flags. Change the Monday date in B1 to view another week. |

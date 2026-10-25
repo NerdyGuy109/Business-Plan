@@ -72,6 +72,9 @@ EMPLOYEE_COLORS = ["#2f7d5b", "#3e7cb1", "#b7791f", "#8e44ad", "#c0392b", "#16a0
 
 USAGE_WINDOW_DAYS = 14
 
+# "partial" = some of the order has arrived and the rest is still expected.
+OPEN_PO_STATUSES = ("open", "partial")
+
 
 class ValidationError(ValueError):
     pass
@@ -236,16 +239,46 @@ class Store:
             if line["ingredient_id"] == ing_id
         ]
 
+    @staticmethod
+    def received_packages(po):
+        """Good packages received so far per ingredient, across every receipt of an order."""
+        got = {}
+        for rc in po.get("receipts", []):
+            for line in rc["lines"]:
+                got[line["ingredient_id"]] = got.get(line["ingredient_id"], 0) + line["good"]
+        return got
+
+    def outstanding(self, po):
+        """Packages still expected per ingredient (none once an order is closed)."""
+        if po["status"] not in OPEN_PO_STATUSES:
+            return {}
+        got = self.received_packages(po)
+        return {l["ingredient_id"]: max(l["packages"] - got.get(l["ingredient_id"], 0), 0) for l in po["lines"]}
+
     def on_order(self):
         qty = {}
         for po in self.data["purchase_orders"]:
-            if po["status"] != "open":
-                continue
-            for line in po["lines"]:
-                ing = self.ingredient(line["ingredient_id"])
+            for ing_id, pkgs in self.outstanding(po).items():
+                ing = self.ingredient(ing_id)
                 if ing:
-                    qty[ing["id"]] = qty.get(ing["id"], 0) + line["packages"] * ing["package_qty"]
+                    qty[ing_id] = qty.get(ing_id, 0) + pkgs * ing["package_qty"]
         return qty
+
+    def po_view(self, po):
+        """A purchase order with received / damaged / outstanding counts per line."""
+        got = self.received_packages(po)
+        damaged = {}
+        for rc in po.get("receipts", []):
+            for line in rc["lines"]:
+                damaged[line["ingredient_id"]] = damaged.get(line["ingredient_id"], 0) + line["damaged"]
+        out = self.outstanding(po)
+        return {
+            **po,
+            "receipts": po.get("receipts", []),
+            "delays": po.get("delays", []),
+            "lines": [{**l, "received": got.get(l["ingredient_id"], 0), "damaged": damaged.get(l["ingredient_id"], 0),
+                       "outstanding": out.get(l["ingredient_id"], 0)} for l in po["lines"]],
+        }
 
     # ------------------------------------------------------------- views
     def snapshot(self):
@@ -292,7 +325,7 @@ class Store:
                 "shifts": [{**s, "hours": shift_hours(s)} for s in self.data["shifts"]],
                 "revenue_by_date": revenue_by_date,
                 "sales": self.data["sales"][-200:],
-                "purchase_orders": self.data["purchase_orders"],
+                "purchase_orders": [self.po_view(po) for po in self.data["purchase_orders"]],
                 "units": UNITS,
                 "usage_window_days": USAGE_WINDOW_DAYS,
             }
@@ -409,24 +442,102 @@ class Store:
             self.data["purchase_orders"].append(po)
             return po
 
-    def receive_purchase_order(self, po_id):
+    def purchase_order(self, po_id):
+        po = next((p for p in self.data["purchase_orders"] if p["id"] == po_id), None)
+        if not po:
+            raise ValidationError(f"Purchase order '{po_id}' not found")
+        return po
+
+    def receive_purchase_order(self, po_id, payload=None):
+        """Record a delivery against an order.
+
+        payload["lines"]: [{ingredient_id, good, damaged, note}] - good packages go into stock,
+        damaged ones are logged but not stocked. Anything not received stays outstanding
+        (status "partial") unless payload["close_short"] says nothing more is coming.
+        With no payload, everything outstanding is received in good condition.
+        """
+        payload = payload or {}
         with self.lock:
-            po = next((p for p in self.data["purchase_orders"] if p["id"] == po_id), None)
-            if not po or po["status"] != "open":
-                raise ValidationError("Purchase order not found or already received")
-            for line in po["lines"]:
+            po = self.purchase_order(po_id)
+            if po["status"] not in OPEN_PO_STATUSES:
+                raise ValidationError(f"{po_id} is already {po['status']}")
+            remaining = self.outstanding(po)
+            given = {l.get("ingredient_id"): l for l in payload.get("lines", [])}
+            unknown = set(given) - set(remaining)
+            if unknown:
+                raise ValidationError(f"{', '.join(map(str, unknown))} is not on {po_id}")
+            lines = []
+            for ing_id, expected in remaining.items():
+                src = given.get(ing_id, {"good": expected} if "lines" not in payload else {})
+                good = _coerce(src.get("good"), int, 0)
+                damaged = _coerce(src.get("damaged"), int, 0)
+                if good < 0 or damaged < 0:
+                    raise ValidationError("Quantities can't be negative")
+                if good > expected:
+                    name = self.ingredient(ing_id)["name"] if self.ingredient(ing_id) else ing_id
+                    raise ValidationError(f"{name}: {good} good packages entered but only {expected} outstanding")
+                lines.append({"ingredient_id": ing_id, "expected": expected, "good": good, "damaged": damaged,
+                              "note": _coerce(src.get("note"), str, "")})
+            close_short = bool(payload.get("close_short"))
+            if not any(l["good"] or l["damaged"] for l in lines) and not close_short:
+                raise ValidationError("Enter what arrived, or tick 'nothing else is coming' to close the order")
+            received_by = payload.get("received_by") or ""
+            if received_by and not self.employee(received_by):
+                raise ValidationError(f"Unknown employee '{received_by}'")
+            when = payload.get("received_at") or datetime.now().isoformat(timespec="minutes")
+            try:
+                when = datetime.fromisoformat(str(when)).isoformat(timespec="minutes")
+            except ValueError:
+                raise ValidationError("Received time must look like 2026-10-25T09:30")
+            receipt = {
+                "id": _next_id("RC", [rc["id"] for p in self.data["purchase_orders"] for rc in p.get("receipts", [])]),
+                "received_at": when,
+                "received_by": received_by,
+                "reference": _coerce(payload.get("reference"), str, ""),
+                "late": when[:10] > po["expected"],
+                "package_damaged": bool(payload.get("package_damaged")),
+                "wrong_items": bool(payload.get("wrong_items")),
+                "notes": _coerce(payload.get("notes"), str, ""),
+                "closed_short": close_short,
+                "lines": lines,
+            }
+            for line in lines:
                 ing = self.ingredient(line["ingredient_id"])
-                if ing:
-                    ing["on_hand"] = round(ing["on_hand"] + line["packages"] * ing["package_qty"], 4)
-            po["status"] = "received"
-            po["received"] = date.today().isoformat()
+                if ing and line["good"]:
+                    ing["on_hand"] = round(ing["on_hand"] + line["good"] * ing["package_qty"], 4)
+            po.setdefault("receipts", []).append(receipt)
+            short = any(l["good"] < l["expected"] for l in lines)
+            if not short:
+                po["status"] = "received"
+            elif close_short:
+                po["status"] = "received"
+                po["short"] = True
+            else:
+                po["status"] = "partial"
+            if po["status"] == "received":
+                po["received"] = when[:10]
+            return receipt
+
+    def log_delay(self, po_id, note, new_expected=None):
+        with self.lock:
+            po = self.purchase_order(po_id)
+            if po["status"] not in OPEN_PO_STATUSES:
+                raise ValidationError(f"{po_id} is already {po['status']}")
+            note = _coerce(note, str, "")
+            if not note:
+                raise ValidationError("Add a note about the delay")
+            entry = {"at": datetime.now().isoformat(timespec="minutes"), "note": note, "previous_expected": po["expected"]}
+            if new_expected:
+                po["expected"] = _clean_date(new_expected)
+            entry["expected"] = po["expected"]
+            po.setdefault("delays", []).append(entry)
             return po
 
     def cancel_purchase_order(self, po_id):
         with self.lock:
-            po = next((p for p in self.data["purchase_orders"] if p["id"] == po_id), None)
-            if not po or po["status"] != "open":
-                raise ValidationError("Purchase order not found or not open")
+            po = self.purchase_order(po_id)
+            if po["status"] != "open":
+                raise ValidationError("Only an order with nothing received yet can be cancelled")
             po["status"] = "cancelled"
             return po
 

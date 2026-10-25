@@ -1886,7 +1886,153 @@
       "qty": 16
     }
   ],
-  "purchase_orders": [],
+  "purchase_orders": [
+    {
+      "id": "PO-001",
+      "supplier": "GreenLeaf Produce",
+      "created": "2026-10-16",
+      "expected": "2026-10-18",
+      "status": "received",
+      "lines": [
+        {
+          "ingredient_id": "ING-014",
+          "packages": 6,
+          "package_cost": 14.0,
+          "shipping_cost": 2.5
+        },
+        {
+          "ingredient_id": "ING-007",
+          "packages": 2,
+          "package_cost": 28.0,
+          "shipping_cost": 4.0
+        }
+      ],
+      "receipts": [
+        {
+          "id": "RC-001",
+          "received_at": "2026-10-18T08:15",
+          "received_by": "EMP-002",
+          "reference": "INV-44817",
+          "late": false,
+          "package_damaged": false,
+          "wrong_items": false,
+          "notes": "",
+          "closed_short": false,
+          "lines": [
+            {
+              "ingredient_id": "ING-014",
+              "expected": 6,
+              "good": 6,
+              "damaged": 0,
+              "note": ""
+            },
+            {
+              "ingredient_id": "ING-007",
+              "expected": 2,
+              "good": 2,
+              "damaged": 0,
+              "note": ""
+            }
+          ]
+        }
+      ],
+      "received": "2026-10-18"
+    },
+    {
+      "id": "PO-002",
+      "supplier": "Frosty Farms",
+      "created": "2026-10-17",
+      "expected": "2026-10-22",
+      "status": "partial",
+      "lines": [
+        {
+          "ingredient_id": "ING-008",
+          "packages": 4,
+          "package_cost": 42.0,
+          "shipping_cost": 8.0
+        },
+        {
+          "ingredient_id": "ING-010",
+          "packages": 3,
+          "package_cost": 44.0,
+          "shipping_cost": 8.0
+        }
+      ],
+      "receipts": [
+        {
+          "id": "RC-002",
+          "received_at": "2026-10-23T09:40",
+          "received_by": "EMP-001",
+          "reference": "FF-209331",
+          "late": true,
+          "package_damaged": true,
+          "wrong_items": false,
+          "notes": "Outer box crushed on one side. Driver signed the damage note.",
+          "closed_short": false,
+          "lines": [
+            {
+              "ingredient_id": "ING-008",
+              "expected": 4,
+              "good": 4,
+              "damaged": 0,
+              "note": ""
+            },
+            {
+              "ingredient_id": "ING-010",
+              "expected": 3,
+              "good": 2,
+              "damaged": 1,
+              "note": "Bags split, thawed. Photo taken; supplier to credit or resend."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "PO-003",
+      "supplier": "Sysco",
+      "created": "2026-10-21",
+      "expected": "2026-10-25",
+      "status": "open",
+      "lines": [
+        {
+          "ingredient_id": "ING-006",
+          "packages": 7,
+          "package_cost": 27.0,
+          "shipping_cost": 3.0
+        },
+        {
+          "ingredient_id": "ING-005",
+          "packages": 2,
+          "package_cost": 21.0,
+          "shipping_cost": 3.0
+        }
+      ]
+    },
+    {
+      "id": "PO-004",
+      "supplier": "Island Imports",
+      "created": "2026-10-13",
+      "expected": "2026-10-27",
+      "status": "open",
+      "lines": [
+        {
+          "ingredient_id": "ING-028",
+          "packages": 9,
+          "package_cost": 62.0,
+          "shipping_cost": 9.0
+        }
+      ],
+      "delays": [
+        {
+          "at": "2026-10-24T14:05",
+          "note": "Supplier called: container held at the port. New delivery date given.",
+          "previous_expected": "2026-10-23",
+          "expected": "2026-10-27"
+        }
+      ]
+    }
+  ],
   "employees": [
     {
       "id": "EMP-001",

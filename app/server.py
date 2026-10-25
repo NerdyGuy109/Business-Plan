@@ -162,10 +162,15 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/purchase-orders" and method == "POST":
                 po = store.create_purchase_order(body.get("supplier", ""), body.get("lines", []))
                 return self._ok({"saved": po})
-            m = re.match(r"^/api/purchase-orders/([\w-]+)/(receive|cancel)$", path)
+            m = re.match(r"^/api/purchase-orders/([\w-]+)/(receive|delay|cancel)$", path)
             if m and method == "POST":
                 po_id, action = m.groups()
-                (store.receive_purchase_order if action == "receive" else store.cancel_purchase_order)(po_id)
+                if action == "receive":
+                    return self._ok({"receipt": store.receive_purchase_order(po_id, body or None)})
+                if action == "delay":
+                    store.log_delay(po_id, body.get("note"), body.get("expected"))
+                else:
+                    store.cancel_purchase_order(po_id)
                 return self._ok()
             if path == "/api/import" and method == "POST":
                 _ctype, raw = _decode_data_url(body.get("data"))

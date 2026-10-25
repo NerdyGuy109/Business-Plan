@@ -154,6 +154,43 @@ def build(store: Store, with_sales=True):
         store.data["sales"].sort(key=lambda s: s["date"])
         for ing in store.data["ingredients"]:
             ing["on_hand"] = start_stock[ing["id"]]
+    _purchase_orders(store, ids)
+
+
+def _purchase_orders(store, ids):
+    """Recent orders in every receiving state, without changing the seeded stock levels."""
+    stock = {i["id"]: i["on_hand"] for i in store.data["ingredients"]}
+    today = datetime.now().date()
+    day = lambda n: (today + timedelta(days=n)).isoformat()
+    emp = {e["name"].split()[0]: e["id"] for e in store.data["employees"]}
+
+    def order(supplier, lines, created, expected):
+        po = store.create_purchase_order(supplier, [{"ingredient_id": ids[n], "packages": q} for n, q in lines])
+        po["created"], po["expected"] = day(created), day(expected)
+        return po
+
+    # On time, everything in good shape.
+    po = order("GreenLeaf Produce", [("Spinach", 6), ("Banana", 2)], -9, -7)
+    store.receive_purchase_order(po["id"], {
+        "received_at": f"{day(-7)}T08:15", "received_by": emp["Jordan"], "reference": "INV-44817",
+        "lines": [{"ingredient_id": ids["Spinach"], "good": 6}, {"ingredient_id": ids["Banana"], "good": 2}]})
+    # A day late, one case crushed: the damaged case is still owed.
+    po = order("Frosty Farms", [("Strawberries (frozen)", 4), ("Peach (frozen)", 3)], -8, -3)
+    store.receive_purchase_order(po["id"], {
+        "received_at": f"{day(-2)}T09:40", "received_by": emp["Maya"], "reference": "FF-209331",
+        "package_damaged": True, "notes": "Outer box crushed on one side. Driver signed the damage note.",
+        "lines": [{"ingredient_id": ids["Strawberries (frozen)"], "good": 4},
+                  {"ingredient_id": ids["Peach (frozen)"], "good": 2, "damaged": 1,
+                   "note": "Bags split, thawed. Photo taken; supplier to credit or resend."}]})
+    # Due today.
+    order("Sysco", [("Greek Yogurt", 7), ("Almond Milk", 2)], -4, 0)
+    # Overdue, with the supplier's new date logged.
+    po = order("Island Imports", [("Acai Packs (frozen)", 9)], -12, -2)
+    store.log_delay(po["id"], "Supplier called: container held at the port. New delivery date given.", day(2))
+    po["delays"][-1]["at"] = f"{day(-1)}T14:05"
+
+    for ing in store.data["ingredients"]:
+        ing["on_hand"] = stock[ing["id"]]
 
 
 if __name__ == "__main__":

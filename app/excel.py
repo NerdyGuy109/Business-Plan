@@ -163,7 +163,8 @@ def export_workbook(store: Store, path=EXPORT_PATH):
                     "with the Item ID, Ingredient ID and quantity."),
         ("Where Used", "Matrix of ingredients vs. menu items - quickly see which items need a part."),
         ("Procurement", "Reorder list grouped by supplier. Rows flagged REORDER should be purchased."),
-        ("Purchase Orders", "Orders created from the website (history)."),
+        ("Purchase Orders", "Orders created from the website with what has been received, damaged and is still outstanding."),
+        ("Receiving Log", "Every delivery checked in on the website: who, when, what arrived, damage, shortages and notes."),
         ("Sales Log", "Sales recorded on the website; feeds 'Units Used' and 'Units Sold'."),
         ("Staff", "Employees with role, hourly rate and maximum hours per week."),
         ("Schedule", "Every shift: date, employee, start/end, hours and labor cost. OPEN = not yet assigned."),
@@ -356,24 +357,63 @@ def export_workbook(store: Store, path=EXPORT_PATH):
 
     # --- Purchase Orders -------------------------------------------------------
     ws = wb.create_sheet("Purchase Orders")
-    po_cols = [("PO #", 9), ("Supplier", 20), ("Created", 11), ("Expected", 11), ("Status", 10),
-               ("Ingredient ID", 12), ("Ingredient", 22), ("Packages", 9), ("Package Cost ($)", 11),
+    po_cols = [("PO #", 9), ("Supplier", 20), ("Created", 11), ("Expected", 11), ("Status", 12),
+               ("Ingredient ID", 12), ("Ingredient", 22), ("Ordered (pkgs)", 9), ("Received OK (pkgs)", 10),
+               ("Damaged (pkgs)", 9), ("Outstanding (pkgs)", 11), ("Package Cost ($)", 11),
                ("Shipping ($)", 11), ("Line Total ($)", 12)]
     for c, (header, width) in enumerate(po_cols, start=1):
         cell = ws.cell(row=1, column=c, value=header)
         cell.font, cell.fill = HEADER, HEADER_FILL
+        cell.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
         ws.column_dimensions[get_column_letter(c)].width = width
+    ws.row_dimensions[1].height = 32
     r = 2
     for po in data["purchase_orders"]:
-        for line in po["lines"]:
+        view = store.po_view(po)
+        status = po["status"] + (" (short)" if po.get("short") else "")
+        for line in view["lines"]:
             ing = store.ingredient(line["ingredient_id"]) or {}
-            vals = [po["id"], po["supplier"], po["created"], po["expected"], po["status"],
-                    line["ingredient_id"], ing.get("name", ""), line["packages"],
-                    line["package_cost"], line["shipping_cost"], f"=H{r}*(I{r}+J{r})"]
+            outstanding = f'=IF(OR(E{r}="open",E{r}="partial"),MAX(H{r}-I{r},0),0)'
+            vals = [po["id"], po["supplier"], po["created"], po["expected"], status,
+                    line["ingredient_id"], ing.get("name", ""), line["packages"], line["received"], line["damaged"],
+                    outstanding, line["package_cost"], line["shipping_cost"], f"=H{r}*(L{r}+M{r})"]
             for c, v in enumerate(vals, start=1):
                 cell = ws.cell(row=r, column=c, value=v)
-                _style_cell(cell, "f" if c == 11 else "in", MONEY if c >= 9 else None)
+                _style_cell(cell, "f" if c in (11, 14) else "in", MONEY if c >= 12 else None)
             r += 1
+    ws.conditional_formatting.add(f"A2:N{max(r - 1, 2)}", FormulaRule(formula=['$K2>0'], fill=PatternFill("solid", fgColor="FDF2DC")))
+    ws.freeze_panes = "A2"
+
+    # --- Receiving Log ---------------------------------------------------------
+    ws = wb.create_sheet("Receiving Log")
+    rc_cols = [("Received At", 16), ("Receipt #", 9), ("PO #", 9), ("Supplier", 20), ("Received By", 16),
+               ("Tracking / Invoice #", 16), ("Late?", 7), ("Box Damaged?", 9), ("Wrong Items?", 9),
+               ("Ingredient", 22), ("Expected (pkgs)", 9), ("Received OK (pkgs)", 10), ("Damaged (pkgs)", 9),
+               ("Short (pkgs)", 8), ("Item Note", 24), ("Delivery Notes", 34)]
+    for c, (header, width) in enumerate(rc_cols, start=1):
+        cell = ws.cell(row=1, column=c, value=header)
+        cell.font, cell.fill = HEADER, HEADER_FILL
+        cell.alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
+        ws.column_dimensions[get_column_letter(c)].width = width
+    ws.row_dimensions[1].height = 32
+    yn = lambda v: "Yes" if v else ""
+    receipts = sorted(((rc, po) for po in data["purchase_orders"] for rc in po.get("receipts", [])),
+                      key=lambda x: x[0]["received_at"], reverse=True)
+    r = 2
+    for rc, po in receipts:
+        who = store.employee(rc["received_by"]) if rc["received_by"] else None
+        for line in rc["lines"]:
+            ing = store.ingredient(line["ingredient_id"]) or {}
+            vals = [rc["received_at"].replace("T", " "), rc["id"], po["id"], po["supplier"], who["name"] if who else "",
+                    rc["reference"], yn(rc["late"]), yn(rc["package_damaged"]), yn(rc["wrong_items"]),
+                    ing.get("name", line["ingredient_id"]), line["expected"], line["good"], line["damaged"],
+                    f"=MAX(K{r}-L{r},0)", line["note"], rc["notes"]]
+            for c, v in enumerate(vals, start=1):
+                _style_cell(ws.cell(row=r, column=c, value=v), "f" if c == 14 else "in", None)
+            r += 1
+    ws.conditional_formatting.add(f"A2:P{max(r - 1, 2)}",
+                                  FormulaRule(formula=['OR($M2>0,$N2>0,$H2="Yes",$I2="Yes")'], fill=RED_FILL))
+    ws.auto_filter.ref = f"A1:P{max(r - 1, 2)}"
     ws.freeze_panes = "A2"
 
     # --- Sales Log -------------------------------------------------------------
