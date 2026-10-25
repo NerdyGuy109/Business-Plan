@@ -253,6 +253,13 @@ class AuthTests(unittest.TestCase):
         self.users.change_own_password("sam", "staff-pass-1", "brand-new-pw")
         self.assertFalse(self.users.get("sam")["must_change"])
 
+    def test_account_added_from_command_line_is_seen_by_running_server(self):
+        other = auth.Users(self.users.path)  # e.g. `python -m app.auth add` in another process
+        other.create("jordan", "jordan-pass-1", role="manager", must_change=False)
+        self.assertIsNotNone(self.users.get("jordan"))
+        self.users.update("pat", {"name": "Pat O."})  # a later save keeps the new account
+        self.assertIsNotNone(auth.Users(self.users.path).get("jordan"))
+
     def test_disabling_ends_sessions(self):
         self.users.create("sam", "staff-pass-1", role="staff")
         token, _ = self.users.login("sam", "staff-pass-1", "1.1.1.1")

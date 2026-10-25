@@ -1,0 +1,44 @@
+# Several shops on one server, one domain: each shop is its own copy of the app with its own data,
+# reached at its own subdomain (demo.yourbrand.com, sunrise.yourbrand.com, ...). Caddy gets an
+# HTTPS certificate for each subdomain automatically.
+#
+#   cd deploy/multi
+#   docker compose up -d --build
+#
+# Add a customer: copy the "customer template" service below, rename it and its volume, add a block
+# to the Caddyfile, then `docker compose up -d`. See docs/launch/Launch-Plan.pdf, section 4.
+
+x-app: &app
+  build: ../..
+  restart: unless-stopped
+  environment: &env
+    MENU_SECURE_COOKIES: "1"   # cookies only over HTTPS
+    MENU_TRUST_PROXY: "1"      # use the visitor address Caddy passes on (login rate limits)
+
+services:
+  # The demo shop: the sample juice bar, for sales demos. Reset it nightly with ./reset-demo.sh
+  demo:
+    <<: *app
+    environment:
+      <<: *env
+      MENU_START_EMPTY: "0"    # start with the sample juice bar
+    volumes: ["demo-data:/data"]
+
+  # ---- customer template: copy this block for each new shop -------------------------------
+  # sunrise:
+  #   <<: *app
+  #   volumes: ["sunrise-data:/data"]   # starts empty; load their menu with the Excel template
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [demo]
+
+volumes:
+  demo-data:
+  # sunrise-data:
+  caddy-data:

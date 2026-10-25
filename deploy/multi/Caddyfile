@@ -1,0 +1,17 @@
+# One block per shop. Replace yourbrand.com with your domain.
+# DNS: an A record for "demo" (and one per shop, or a single wildcard "*") pointing at this server.
+
+(shop) {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+demo.yourbrand.com {
+	import shop
+	reverse_proxy demo:8000
+}
+
+# sunrise.yourbrand.com {
+# 	import shop
+# 	reverse_proxy sunrise:8000
+# }

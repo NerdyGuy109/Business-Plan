@@ -65,26 +65,46 @@ class Users:
         self.lock = threading.RLock()
         self.sessions = {}   # token -> {"username", "expires"}
         self.failures = {}   # (ip, username) -> [count, first_failure_time]
-        self.users = self._load()
+        self._users, self._mtime = [], None
+        self._sync()
 
     # ---------------------------------------------------------------- io
-    def _load(self):
-        if not os.path.exists(self.path):
-            return []
-        with open(self.path, encoding="utf-8") as f:
-            return json.load(f)
+    def _stamp(self):
+        try:
+            return os.stat(self.path).st_mtime_ns
+        except FileNotFoundError:
+            return None
+
+    def _sync(self):
+        """Re-read users.json if it changed on disk, e.g. an account added with `python -m app.auth`
+        while the server is running, so the server never overwrites it with an old copy."""
+        with self.lock:
+            stamp = self._stamp()
+            if stamp != self._mtime:
+                if stamp is None:
+                    self._users = []
+                else:
+                    with open(self.path, encoding="utf-8") as f:
+                        self._users = json.load(f)
+                self._mtime = stamp
+
+    @property
+    def users(self):
+        self._sync()
+        return self._users
 
     def save(self):
         with self.lock:
             os.makedirs(os.path.dirname(self.path), exist_ok=True)
             tmp = self.path + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(self.users, f, indent=2)
+                json.dump(self._users, f, indent=2)
             os.replace(tmp, self.path)
             try:
                 os.chmod(self.path, 0o600)
             except OSError:
                 pass
+            self._mtime = self._stamp()
 
     # ------------------------------------------------------------ lookups
     def get(self, username):

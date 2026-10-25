@@ -169,6 +169,6 @@ opening that file in Chrome and choosing Print → Save as PDF (Letter, margins 
 ```bash
 python -m unittest discover tests
 ```
-28 automated checks cover costing, yields, allergens, price-change tracking, sales, receiving, counts, waste,
+29 automated checks cover costing, yields, allergens, price-change tracking, sales, receiving, counts, waste,
 the POS import, scheduling, the Excel round trip, passwords and lockout, and the web server's role and CSRF
 rules. They run against a throwaway folder and never touch your data.
