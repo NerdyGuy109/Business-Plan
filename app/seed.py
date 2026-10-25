@@ -8,37 +8,37 @@ from .store import Store, empty_catalog
 
 # name, category, unit, supplier, package desc, units/pkg, pkg cost, shipping, lead, shelf, min, on hand, reorder, par
 INGREDIENTS = [
-    ("Apple Juice", "Juice Base", "fl oz", "Valley Fresh Juices", "1 gal jug", 128, 9.50, 1.20, 3, 21, 2, 410, 256, 768),
-    ("Orange Juice", "Juice Base", "fl oz", "Valley Fresh Juices", "1 gal jug", 128, 11.25, 1.20, 3, 14, 2, 180, 256, 768),
-    ("Pineapple Juice", "Juice Base", "fl oz", "Valley Fresh Juices", "46 fl oz can", 46, 3.40, 0.40, 3, 180, 6, 220, 138, 414),
-    ("Coconut Water", "Juice Base", "fl oz", "Island Imports", "1 L carton x 12", 405.6, 38.00, 6.50, 7, 270, 1, 600, 400, 1200),
-    ("Almond Milk", "Dairy & Alt", "fl oz", "Sysco", "64 fl oz carton x 6", 384, 21.00, 3.00, 4, 60, 1, 300, 250, 768),
-    ("Greek Yogurt", "Dairy & Alt", "oz", "Sysco", "32 oz tub x 6", 192, 27.00, 3.00, 4, 21, 1, 95, 120, 384),
-    ("Banana", "Fruit", "each", "GreenLeaf Produce", "40 lb case (~100 ct)", 100, 28.00, 4.00, 2, 6, 1, 64, 50, 200),
-    ("Strawberries (frozen)", "Fruit", "oz", "Frosty Farms", "5 lb bag x 4", 320, 42.00, 8.00, 5, 365, 1, 410, 240, 960),
-    ("Mango (frozen)", "Fruit", "oz", "Frosty Farms", "5 lb bag x 4", 320, 46.00, 8.00, 5, 365, 1, 150, 240, 960),
-    ("Peach (frozen)", "Fruit", "oz", "Frosty Farms", "5 lb bag x 4", 320, 44.00, 8.00, 5, 365, 1, 520, 240, 960),
-    ("Blueberries (frozen)", "Fruit", "oz", "Frosty Farms", "5 lb bag x 4", 320, 58.00, 8.00, 5, 365, 1, 390, 240, 960),
-    ("Pineapple Chunks", "Fruit", "oz", "GreenLeaf Produce", "10 lb case", 160, 22.00, 3.00, 2, 5, 1, 70, 64, 240),
-    ("Lemon", "Fruit", "each", "GreenLeaf Produce", "Case of 115", 115, 36.00, 4.00, 2, 21, 1, 48, 30, 115),
-    ("Spinach", "Greens", "oz", "GreenLeaf Produce", "4 lb case", 64, 14.00, 2.50, 2, 7, 1, 30, 32, 128),
-    ("Kale", "Greens", "oz", "GreenLeaf Produce", "4 lb case", 64, 15.50, 2.50, 2, 7, 1, 70, 32, 128),
-    ("Cucumber", "Greens", "each", "GreenLeaf Produce", "Case of 24", 24, 18.00, 2.50, 2, 10, 1, 20, 10, 48),
-    ("Celery", "Greens", "oz", "GreenLeaf Produce", "30 lb case", 480, 32.00, 4.00, 2, 14, 1, 300, 160, 480),
-    ("Carrot", "Vegetable", "oz", "GreenLeaf Produce", "25 lb bag", 400, 19.00, 3.00, 2, 28, 1, 260, 160, 800),
-    ("Beet", "Vegetable", "oz", "GreenLeaf Produce", "25 lb bag", 400, 24.00, 3.00, 2, 28, 1, 210, 100, 400),
-    ("Ginger Root", "Vegetable", "oz", "GreenLeaf Produce", "5 lb box", 80, 22.00, 1.50, 2, 30, 1, 24, 16, 80),
-    ("Turmeric Root", "Vegetable", "oz", "GreenLeaf Produce", "1 lb bag", 16, 8.50, 0.75, 2, 21, 2, 18, 8, 32),
-    ("Mint", "Herbs", "oz", "GreenLeaf Produce", "1 lb bunch case", 16, 12.00, 1.00, 2, 7, 1, 9, 4, 16),
-    ("Honey", "Sweetener", "oz", "Bee Happy Apiary", "5 lb jar", 80, 32.00, 5.00, 6, 730, 1, 60, 24, 160),
-    ("Agave Syrup", "Sweetener", "fl oz", "Sysco", "46 fl oz bottle", 46, 11.00, 1.00, 4, 730, 2, 70, 30, 138),
-    ("Whey Protein", "Boosts", "scoop", "NutriSource", "5 lb tub (~70 scoops)", 70, 54.00, 6.00, 7, 540, 1, 80, 40, 140),
-    ("Chia Seeds", "Boosts", "tbsp", "NutriSource", "2 lb bag (~85 tbsp)", 85, 13.00, 2.00, 7, 540, 1, 60, 30, 170),
-    ("Peanut Butter", "Boosts", "tbsp", "Sysco", "5 lb tub (~150 tbsp)", 150, 17.00, 2.00, 4, 180, 1, 120, 50, 300),
-    ("Acai Packs (frozen)", "Fruit", "each", "Island Imports", "Case of 48 x 100 g", 48, 62.00, 9.00, 10, 540, 1, 22, 30, 120),
+    ("Apple Juice", "Juice Base", "fl oz", "Valley Fresh Juices", "1 gal jug", 128, 9.50, 1.20, 3, 21, 2, 1640, 1024, 3072),
+    ("Orange Juice", "Juice Base", "fl oz", "Valley Fresh Juices", "1 gal jug", 128, 11.25, 1.20, 3, 14, 2, 720, 1024, 3072),
+    ("Pineapple Juice", "Juice Base", "fl oz", "Valley Fresh Juices", "46 fl oz can", 46, 3.40, 0.40, 3, 180, 6, 880, 552, 1656),
+    ("Coconut Water", "Juice Base", "fl oz", "Island Imports", "1 L carton x 12", 405.6, 38.00, 6.50, 7, 270, 1, 2400, 1600, 4800),
+    ("Almond Milk", "Dairy & Alt", "fl oz", "Sysco", "64 fl oz carton x 6", 384, 21.00, 3.00, 4, 60, 1, 1200, 1000, 3072),
+    ("Greek Yogurt", "Dairy & Alt", "oz", "Sysco", "32 oz tub x 6", 192, 27.00, 3.00, 4, 21, 1, 380, 480, 1536),
+    ("Banana", "Fruit", "each", "GreenLeaf Produce", "40 lb case (~100 ct)", 100, 28.00, 4.00, 2, 6, 1, 256, 200, 800),
+    ("Strawberries (frozen)", "Fruit", "oz", "Frosty Farms", "5 lb bag x 4", 320, 42.00, 8.00, 5, 365, 1, 1640, 960, 3840),
+    ("Mango (frozen)", "Fruit", "oz", "Frosty Farms", "5 lb bag x 4", 320, 46.00, 8.00, 5, 365, 1, 600, 960, 3840),
+    ("Peach (frozen)", "Fruit", "oz", "Frosty Farms", "5 lb bag x 4", 320, 44.00, 8.00, 5, 365, 1, 2080, 960, 3840),
+    ("Blueberries (frozen)", "Fruit", "oz", "Frosty Farms", "5 lb bag x 4", 320, 58.00, 8.00, 5, 365, 1, 1560, 960, 3840),
+    ("Pineapple Chunks", "Fruit", "oz", "GreenLeaf Produce", "10 lb case", 160, 22.00, 3.00, 2, 5, 1, 280, 256, 960),
+    ("Lemon", "Fruit", "each", "GreenLeaf Produce", "Case of 115", 115, 36.00, 4.00, 2, 21, 1, 192, 120, 460),
+    ("Spinach", "Greens", "oz", "GreenLeaf Produce", "4 lb case", 64, 14.00, 2.50, 2, 7, 1, 120, 128, 512),
+    ("Kale", "Greens", "oz", "GreenLeaf Produce", "4 lb case", 64, 15.50, 2.50, 2, 7, 1, 280, 128, 512),
+    ("Cucumber", "Greens", "each", "GreenLeaf Produce", "Case of 24", 24, 18.00, 2.50, 2, 10, 1, 80, 40, 192),
+    ("Celery", "Greens", "oz", "GreenLeaf Produce", "30 lb case", 480, 32.00, 4.00, 2, 14, 1, 1200, 640, 1920),
+    ("Carrot", "Vegetable", "oz", "GreenLeaf Produce", "25 lb bag", 400, 19.00, 3.00, 2, 28, 1, 1040, 640, 3200),
+    ("Beet", "Vegetable", "oz", "GreenLeaf Produce", "25 lb bag", 400, 24.00, 3.00, 2, 28, 1, 840, 400, 1600),
+    ("Ginger Root", "Vegetable", "oz", "GreenLeaf Produce", "5 lb box", 80, 22.00, 1.50, 2, 30, 1, 96, 64, 320),
+    ("Turmeric Root", "Vegetable", "oz", "GreenLeaf Produce", "1 lb bag", 16, 8.50, 0.75, 2, 21, 2, 72, 32, 128),
+    ("Mint", "Herbs", "oz", "GreenLeaf Produce", "1 lb bunch case", 16, 12.00, 1.00, 2, 7, 1, 36, 16, 64),
+    ("Honey", "Sweetener", "oz", "Bee Happy Apiary", "5 lb jar", 80, 32.00, 5.00, 6, 730, 1, 240, 96, 640),
+    ("Agave Syrup", "Sweetener", "fl oz", "Sysco", "46 fl oz bottle", 46, 11.00, 1.00, 4, 730, 2, 280, 120, 552),
+    ("Whey Protein", "Boosts", "scoop", "NutriSource", "5 lb tub (~70 scoops)", 70, 54.00, 6.00, 7, 540, 1, 320, 160, 560),
+    ("Chia Seeds", "Boosts", "tbsp", "NutriSource", "2 lb bag (~85 tbsp)", 85, 13.00, 2.00, 7, 540, 1, 240, 120, 680),
+    ("Peanut Butter", "Boosts", "tbsp", "Sysco", "5 lb tub (~150 tbsp)", 150, 17.00, 2.00, 4, 180, 1, 480, 200, 1200),
+    ("Acai Packs (frozen)", "Fruit", "each", "Island Imports", "Case of 48 x 100 g", 48, 62.00, 9.00, 10, 540, 1, 88, 120, 480),
     ("Ice", "Base", "oz", "In-house", "Ice machine (no cost)", 1000, 0.00, 0.00, 0, 0, 1, 5000, 0, 5000),
-    ("16 oz Cup + Lid + Straw", "Packaging", "each", "EcoServe Packaging", "Case of 500", 500, 85.00, 12.00, 6, 0, 1, 380, 250, 1000),
-    ("24 oz Cup + Lid + Straw", "Packaging", "each", "EcoServe Packaging", "Case of 400", 400, 92.00, 12.00, 6, 0, 1, 140, 200, 800),
+    ("16 oz Cup + Lid + Straw", "Packaging", "each", "EcoServe Packaging", "Case of 500", 500, 85.00, 12.00, 6, 0, 1, 1520, 1000, 4000),
+    ("24 oz Cup + Lid + Straw", "Packaging", "each", "EcoServe Packaging", "Case of 400", 400, 92.00, 12.00, 6, 0, 1, 560, 800, 3200),
 ]
 
 ITEMS = [
@@ -90,6 +90,27 @@ ITEMS = [
       ("Honey", 0.5), ("Ice", 3), ("24 oz Cup + Lid + Straw", 1)]),
 ]
 
+# name, role, hourly rate, max hours / week
+EMPLOYEES = [
+    ("Maya Torres", "Manager", 24.00, 40),
+    ("Jordan Lee", "Shift Lead", 19.50, 40),
+    ("Sam Patel", "Juicer", 16.50, 40),
+    ("Alex Kim", "Juicer", 16.00, 30),
+    ("Riley Chen", "Juicer", 16.00, 30),
+    ("Casey Brooks", "Cashier", 15.50, 28),
+]
+
+# Weekly pattern: employee index -> list of (weekday 0=Mon, start, end)
+OPEN, MID, CLOSE = ("06:30", "14:30"), ("10:00", "16:00"), ("13:00", "20:00")
+PATTERN = {
+    0: [(d, *OPEN) for d in range(0, 5)],
+    1: [(d, *CLOSE) for d in (0, 1, 2, 3, 4)],
+    2: [(d, *OPEN) for d in (0, 1, 4, 5)] + [(6, *CLOSE)],
+    3: [(d, *CLOSE) for d in (2, 5, 6)] + [(d, *OPEN) for d in (3, 4)],
+    4: [(d, *MID) for d in (4, 6)] + [(5, *OPEN)],
+    5: [(d, *MID) for d in (0, 1, 3)] + [(6, *OPEN)],
+}
+
 FIELDS = ["name", "category", "unit", "supplier", "package_desc", "package_qty", "package_cost",
           "shipping_cost", "lead_time_days", "shelf_life_days", "min_order_packages", "on_hand",
           "reorder_point", "par_level"]
@@ -108,6 +129,18 @@ def build(store: Store, with_sales=True):
             "description": desc, "active": True,
             "recipe": [{"ingredient_id": ids[i], "qty": q} for i, q in recipe],
         })
+    for name, role, rate, max_hours in EMPLOYEES:
+        store.upsert_employee({"name": name, "role": role, "hourly_rate": rate, "max_hours": max_hours})
+    this_monday = datetime.now().date() - timedelta(days=datetime.now().weekday())
+    for monday in (this_monday - timedelta(days=7), this_monday):
+        for idx, shifts in PATTERN.items():
+            emp = store.data["employees"][idx]
+            for day, start, end in shifts:
+                store.upsert_shift({"employee_id": emp["id"], "date": (monday + timedelta(days=day)).isoformat(),
+                                    "start": start, "end": end, "role": emp["role"]})
+    # One gap the manager still needs to fill.
+    store.upsert_shift({"employee_id": None, "date": (this_monday + timedelta(days=5)).isoformat(),
+                        "start": "13:00", "end": "20:00", "role": "Juicer", "notes": "Saturday close"})
     if with_sales:
         # Two weeks of sales history, without consuming the seeded stock levels.
         rng = random.Random(42)
@@ -115,7 +148,7 @@ def build(store: Store, with_sales=True):
         now = datetime.now().replace(minute=0, second=0, microsecond=0)
         for day in range(14, 0, -1):
             for item in store.data["items"]:
-                qty = rng.randint(1, 9)
+                qty = rng.randint(12, 30)  # ~250 drinks a day across the menu
                 when = (now - timedelta(days=day)).replace(hour=rng.randint(8, 18))
                 store.record_sales([{"item_id": item["id"], "qty": qty}], when.isoformat())
         store.data["sales"].sort(key=lambda s: s["date"])

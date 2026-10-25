@@ -12,6 +12,7 @@ blue input columns of the Ingredients, Menu Items and Recipes sheets are read.
 import os
 import re
 import sys
+from datetime import date, time
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.comments import Comment
@@ -20,7 +21,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from .store import ROOT, UNITS, Store
+from .store import ROOT, UNITS, Store, week_start
 
 EXPORT_PATH = os.path.join(ROOT, "exports", "inventory.xlsx")
 
@@ -164,6 +165,10 @@ def export_workbook(store: Store, path=EXPORT_PATH):
         ("Procurement", "Reorder list grouped by supplier. Rows flagged REORDER should be purchased."),
         ("Purchase Orders", "Orders created from the website (history)."),
         ("Sales Log", "Sales recorded on the website; feeds 'Units Used' and 'Units Sold'."),
+        ("Staff", "Employees with role, hourly rate and maximum hours per week."),
+        ("Schedule", "Every shift: date, employee, start/end, hours and labor cost. OPEN = not yet assigned."),
+        ("Weekly Hours", "Hours per employee per day for one week. Change the Monday date in B1 to "
+                         "look at another week; over-max rows turn red."),
         ("", ""),
         ("Colour legend", "Blue header / blue text = input you can edit.  Dark green header = calculated, "
                           "do not overwrite.  Green text = pulled from another sheet."),
@@ -389,6 +394,8 @@ def export_workbook(store: Store, path=EXPORT_PATH):
                                   f"MATCH(B{r},{ITM},0)),0)"), "f", MONEY)
     ws.freeze_panes = "A2"
 
+    _schedule_sheets(wb, store)
+
     for sheet in wb.worksheets:
         sheet.sheet_view.zoomScale = 100
     wb.calculation.fullCalcOnLoad = True
@@ -398,6 +405,134 @@ def export_workbook(store: Store, path=EXPORT_PATH):
     wb.save(tmp)
     os.replace(tmp, path)
     return path
+
+
+STAFF_COLS = [
+    ("Employee ID", "id", "in", 12, None),
+    ("Name", "name", "in", 20, None),
+    ("Role", "role", "in", 12, None),
+    ("Hourly Rate ($)", "hourly_rate", "in", 10, MONEY),
+    ("Max Hours / Week", "max_hours", "in", 10, "0.#"),
+    ("Phone", "phone", "in", 15, None),
+    ("Email", "email", "in", 24, None),
+    ("Active", "active", "in", 8, None),
+]
+SCHED_COLS = [
+    ("Shift ID", None, "in", 10, None),
+    ("Date", None, "in", 11, "yyyy-mm-dd"),
+    ("Day", None, "f", 6, None),
+    ("Employee ID", None, "in", 12, None),
+    ("Employee", None, "link", 20, None),
+    ("Role", None, "in", 11, None),
+    ("Start", None, "in", 8, "hh:mm"),
+    ("End", None, "in", 8, "hh:mm"),
+    ("Hours", None, "f", 8, "0.0#"),
+    ("Hourly Rate ($)", None, "link", 10, MONEY),
+    ("Labor Cost ($)", None, "f", 11, MONEY),
+    ("Week Of", None, "f", 11, "yyyy-mm-dd"),
+    ("Notes", None, "in", 24, None),
+]
+
+
+def _schedule_sheets(wb, store):
+    """Staff, Schedule (one row per shift) and a Weekly Hours grid driven by formulas."""
+    emps = store.data["employees"]
+    shifts = sorted(store.data["shifts"], key=lambda x: (x["date"], x["start"]))
+    n_emp = max(len(emps) + 50, 100)
+    n_sh = max(len(shifts) + 500, 2000)
+
+    ws = wb.create_sheet("Staff")
+    _header_row(ws, STAFF_COLS)
+    for r, e in enumerate(emps, start=2):
+        for c, (_h, key, kind, _w, fmt) in enumerate(STAFF_COLS, start=1):
+            v = ("Yes" if e[key] else "No") if key == "active" else e.get(key)
+            _style_cell(ws.cell(row=r, column=c, value=v), kind, fmt)
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(STAFF_COLS))}{len(emps) + 1}"
+
+    S = {h: col(SCHED_COLS, h) for h, *_ in SCHED_COLS}
+    rate = col(STAFF_COLS, "Hourly Rate ($)")
+    ws = wb.create_sheet("Schedule")
+    _header_row(ws, SCHED_COLS)
+    for r, sh in enumerate(shifts, start=2):
+        L = {h: f"{S[h]}{r}" for h in S}
+        hh, mm = map(int, sh["start"].split(":"))
+        eh, em = map(int, sh["end"].split(":"))
+        values = {
+            "Shift ID": sh["id"],
+            "Date": date.fromisoformat(sh["date"]),
+            "Day": f'=TEXT({L["Date"]},"ddd")',
+            "Employee ID": sh["employee_id"] or "OPEN",
+            "Employee": f'=IF({L["Employee ID"]}="OPEN","OPEN SHIFT",IFERROR(INDEX(Staff!$B$2:$B${n_emp},'
+                        f'MATCH({L["Employee ID"]},Staff!$A$2:$A${n_emp},0)),""))',
+            "Role": sh["role"],
+            "Start": time(hh, mm),
+            "End": time(eh, em),
+            "Hours": f"=MOD({L['End']}-{L['Start']},1)*24",
+            "Hourly Rate ($)": f"=IFERROR(INDEX(Staff!${rate}$2:${rate}${n_emp},"
+                               f"MATCH({L['Employee ID']},Staff!$A$2:$A${n_emp},0)),0)",
+            "Labor Cost ($)": f"={L['Hours']}*{L['Hourly Rate ($)']}",
+            "Week Of": f"={L['Date']}-WEEKDAY({L['Date']},3)",
+            "Notes": sh.get("notes", ""),
+        }
+        for c, (header, _key, kind, _w, fmt) in enumerate(SCHED_COLS, start=1):
+            _style_cell(ws.cell(row=r, column=c, value=values[header]), kind, fmt)
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(SCHED_COLS))}{len(shifts) + 1}"
+    ws.conditional_formatting.add(f"A2:{get_column_letter(len(SCHED_COLS))}{n_sh}",
+                                  FormulaRule(formula=[f'${S["Employee ID"]}2="OPEN"'],
+                                              fill=PatternFill("solid", fgColor="FDF2DC")))
+
+    # --- Weekly Hours grid ----------------------------------------------------
+    ws = wb.create_sheet("Weekly Hours")
+    ws["A1"] = "Week of"
+    ws["A1"].font = Font(name=FONT, bold=True)
+    ws["B1"] = week_start(date.today())
+    ws["B1"].font, ws["B1"].number_format = INPUT, "yyyy-mm-dd"
+    ws["B1"].fill = PatternFill("solid", fgColor="FFFF00")
+    ws["C1"] = "Change this Monday date to view another week."
+    ws["C1"].font = Font(name=FONT, italic=True, color="666666")
+    heads = ["Employee ID", "Name", "Role"] + [None] * 7 + ["Total Hours", "Max Hours", "Over Max?", "Labor Cost ($)"]
+    widths = [12, 20, 11] + [11] * 7 + [10, 9, 9, 12]
+    for c, (h, w) in enumerate(zip(heads, widths), start=1):
+        cell = ws.cell(row=3, column=c, value=h if h else f"=$B$1+{c - 4}")
+        cell.font, cell.fill = HEADER, HEADER_FILL
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        if not h:
+            cell.number_format = "ddd m/d"
+        ws.column_dimensions[get_column_letter(c)].width = w
+    ws.row_dimensions[3].height = 32
+    rng = lambda h: f"Schedule!${S[h]}$2:${S[h]}${n_sh}"
+    roster = [e for e in emps if e["active"]] + [e for e in emps if not e["active"]]
+    rows = [(e["id"], e["name"], e["role"], e["max_hours"]) for e in roster] + [("OPEN", "Open shifts", "", None)]
+    for r, (eid, name, role, mx) in enumerate(rows, start=4):
+        for c, v in enumerate([eid, name, role], start=1):
+            _style_cell(ws.cell(row=r, column=c, value=v), "f" if c == 1 else "link", None)
+        for c in range(4, 11):
+            d = f"{get_column_letter(c)}$3"
+            cell = ws.cell(row=r, column=c, value=f'=SUMIFS({rng("Hours")},{rng("Employee ID")},$A{r},{rng("Date")},{d})')
+            _style_cell(cell, "f", '0.0#;-0.0#;""')
+            cell.alignment = Alignment(horizontal="center")
+        _style_cell(ws.cell(row=r, column=11, value=f"=SUM(D{r}:J{r})"), "f", "0.0#")
+        _style_cell(ws.cell(row=r, column=12, value=mx), "link", "0.#")
+        _style_cell(ws.cell(row=r, column=13, value=f'=IF(AND(L{r}<>"",K{r}>L{r}),"OVER","")'), "f", None)
+        _style_cell(ws.cell(row=r, column=14,
+                            value=f'=SUMIFS({rng("Labor Cost ($)")},{rng("Employee ID")},$A{r},'
+                                  f'{rng("Week Of")},$B$1)'), "f", MONEY)
+    last = len(rows) + 3
+    tot = last + 1
+    ws.cell(row=tot, column=2, value="Total hours").font = Font(name=FONT, bold=True)
+    ws.cell(row=tot + 1, column=2, value="Labor cost ($)").font = Font(name=FONT, bold=True)
+    for c in range(4, 12):
+        L = get_column_letter(c)
+        _style_cell(ws.cell(row=tot, column=c, value=f"=SUM({L}4:{L}{last})"), "f", "0.0#")
+        ws.cell(row=tot, column=c).font = Font(name=FONT, bold=True)
+        if c <= 10:
+            v = f'=SUMIFS({rng("Labor Cost ($)")},{rng("Date")},{L}$3)'
+            _style_cell(ws.cell(row=tot + 1, column=c, value=v), "f", '$#,##0')
+    _style_cell(ws.cell(row=tot + 1, column=14, value=f"=SUM(N4:N{last})"), "f", MONEY)
+    ws.cell(row=tot + 1, column=14).font = Font(name=FONT, bold=True)
+    ws.conditional_formatting.add(f"A4:N{last}", FormulaRule(formula=['$M4="OVER"'], fill=RED_FILL))
+    ws.conditional_formatting.add(f"D4:J{last}", CellIsRule(operator="greaterThan", formula=["0"], fill=MATRIX_FILL))
+    ws.freeze_panes = "D4"
 
 
 def export_listener(store):

@@ -1,7 +1,7 @@
 "use strict";
 
 // ------------------------------------------------------------------ state
-let S = { ingredients: [], items: [], sales: [], purchase_orders: [], units: [] };
+let S = { ingredients: [], items: [], sales: [], purchase_orders: [], units: [], employees: [], shifts: [], revenue_by_date: {} };
 const ticket = {};            // item_id -> qty
 const procQty = {};           // ingredient_id -> packages override
 let editingItem = null;       // { id?, recipe: [{ingredient_id, qty}], image }
@@ -11,7 +11,7 @@ let pickerCat = "";
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const money = (v, d = 2) => (v < 0 ? "-$" : "$") + Math.abs(v || 0).toFixed(d);
+const money = (v, d = 2) => (v < 0 ? "-$" : "$") + Math.abs(v || 0).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 const num = (v) => (Math.round((v || 0) * 100) / 100).toLocaleString();
 const pct = (v) => ((v || 0) * 100).toFixed(1) + "%";
 const ingById = (id) => S.ingredients.find((i) => i.id === id);
@@ -68,6 +68,7 @@ function render() {
   renderIngredients();
   renderSell();
   renderProcurement();
+  renderSchedule();
   if ($("#item-dialog").open) renderBuilder();
 }
 
@@ -111,6 +112,12 @@ function renderDashboard() {
     ["Items out of stock", out.length, out.map((i) => i.name).join(", ") || "all available", out.length ? "bad" : ""],
     ["Stock value", money(value), "at landed cost"],
     ["Avg ingredient cost", pct(avgCost), "of menu price"],
+    ...(() => {
+      const W = weekStats(mondayOf(todayIso()));
+      const openCount = W.shifts.filter((s) => !s.employee_id).length;
+      return [["Labor this week", money(W.labor, 0), W.sales ? `${pct(W.labor / W.sales)} of sales so far` : `${num(W.hours)} scheduled hours`,
+        openCount ? "warn" : ""]];
+    })(),
   ].map(([l, v, s, c]) => `<div class="kpi ${c || ""}"><div class="kpi-l">${l}</div><div class="kpi-v">${esc(v)}</div><div class="kpi-s">${esc(s)}</div></div>`).join("");
 
   $("#dash-reorder").innerHTML = reorder.length
@@ -517,6 +524,262 @@ $("#po-list").addEventListener("click", async (e) => {
   try {
     if (recv) { await api("POST", `/api/purchase-orders/${recv}/receive`); toast(`${recv} received — stock added`); }
     if (cancel && confirm(`Cancel ${cancel}?`)) { await api("POST", `/api/purchase-orders/${cancel}/cancel`); }
+  } catch (err) { toast(err.message, true); }
+});
+
+// ---------------------------------------------------------------- schedule
+const pad2 = (n) => String(n).padStart(2, "0");
+const isoOf = (dt) => `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+const addDays = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); return isoOf(new Date(y, m - 1, d + n)); };
+const mondayOf = (iso) => { const [y, m, d] = iso.split("-").map(Number); return addDays(iso, -((new Date(y, m - 1, d).getDay() + 6) % 7)); };
+const todayIso = () => isoOf(new Date());
+const dayLabel = (iso, opts) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, opts); };
+const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const clock = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return `${h % 12 || 12}${m ? ":" + pad2(m) : ""}${h < 12 ? "a" : "p"}`;
+};
+const SHIFT_PRESETS = [["Open", "06:30", "14:30"], ["Mid", "10:00", "16:00"], ["Close", "13:00", "20:00"]];
+let weekStart = mondayOf(todayIso());
+let editingShift = null;
+let editingEmp = null;
+const empById = (id) => S.employees.find((e) => e.id === id);
+
+function weekStats(start) {
+  const days = [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(start, i));
+  const shifts = S.shifts.filter((s) => s.date >= days[0] && s.date <= days[6]);
+  const cost = (s) => s.hours * (empById(s.employee_id)?.hourly_rate || 0);
+  const sales = days.reduce((a, d) => a + (S.revenue_by_date[d] || 0), 0);
+  const labor = shifts.reduce((a, s) => a + cost(s), 0);
+  return { days, shifts, cost, sales, labor, hours: shifts.reduce((a, s) => a + s.hours, 0) };
+}
+
+// Shifts that overlap another shift of the same person.
+function conflicts(shifts) {
+  const bad = new Set();
+  const span = (s) => { const a = toMin(s.start); let b = toMin(s.end); if (b <= a) b += 1440; return [a, b]; };
+  for (const a of shifts) for (const b of shifts) {
+    if (a === b || !a.employee_id || a.employee_id !== b.employee_id || a.date !== b.date) continue;
+    const [as, ae] = span(a), [bs, be] = span(b);
+    if (as < be && bs < ae) bad.add(a.id);
+  }
+  return bad;
+}
+
+function renderSchedule() {
+  const W = weekStats(weekStart);
+  const { days, shifts } = W;
+  $("#wk-label").textContent = `${dayLabel(days[0], { month: "short", day: "numeric" })} – ${dayLabel(days[6], { month: "short", day: "numeric", year: "numeric" })}`;
+  $("#roles").innerHTML = unique([...S.employees.map((e) => e.role), ...S.shifts.map((s) => s.role)]).map((r) => `<option value="${esc(r)}">`).join("");
+
+  const showFormer = $("#show-former").checked;
+  const staff = S.employees.filter((e) => e.active || showFormer || shifts.some((s) => s.employee_id === e.id));
+  const clash = conflicts(shifts);
+  const open = shifts.filter((s) => !s.employee_id);
+  const warnings = [];
+  const today = todayIso();
+
+  const chip = (s) => {
+    const emp = empById(s.employee_id);
+    return `<div class="shift ${emp ? "" : "open"} ${clash.has(s.id) ? "conflict" : ""}" draggable="true" data-id="${esc(s.id)}"
+      style="--c:${esc(emp?.color || "var(--warn)")}" title="${esc(s.notes || "")}">
+      <b>${clock(s.start)}–${clock(s.end)}</b><span>${esc(s.role || "")}${s.role ? " · " : ""}${num(s.hours)}h</span>
+      ${s.notes ? `<i>${esc(s.notes)}</i>` : ""}</div>`;
+  };
+  const row = (emp) => {
+    const mine = shifts.filter((s) => (s.employee_id || null) === (emp ? emp.id : null));
+    const hours = mine.reduce((a, s) => a + s.hours, 0);
+    const over = emp && emp.max_hours > 0 && hours > emp.max_hours;
+    if (over) warnings.push(`${emp.name} is scheduled ${num(hours)}h, over their ${num(emp.max_hours)}h maximum.`);
+    const head = emp
+      ? `<th class="emp" data-emp="${esc(emp.id)}" style="--c:${esc(emp.color)}"><span class="dot"></span><b>${esc(emp.name)}</b>
+          ${emp.active ? "" : '<span class="pill">former</span>'}
+          <div class="hint">${esc(emp.role)} · ${money(emp.hourly_rate)}/h</div>
+          <div class="hint ${over ? "bad-text" : ""}">${num(hours)} / ${num(emp.max_hours)}h · ${money(hours * emp.hourly_rate, 0)}</div></th>`
+      : `<th class="emp open-row"><b>Open shifts</b><div class="hint">${open.length ? `${open.length} to fill` : "none"}</div></th>`;
+    return `<tr>${head}${days.map((d) => `<td class="cell ${d === today ? "today" : ""}" data-emp="${emp ? esc(emp.id) : ""}" data-date="${d}">
+      ${mine.filter((s) => s.date === d).sort((a, b) => a.start.localeCompare(b.start)).map(chip).join("")}</td>`).join("")}</tr>`;
+  };
+
+  const perDay = days.map((d) => {
+    const ds = shifts.filter((s) => s.date === d);
+    const labor = ds.reduce((a, s) => a + W.cost(s), 0);
+    const sales = S.revenue_by_date[d] || 0;
+    return { hours: ds.reduce((a, s) => a + s.hours, 0), people: new Set(ds.filter((s) => s.employee_id).map((s) => s.employee_id)).size, labor, sales };
+  });
+  const body = row(null) + staff.map(row).join("");
+  $("#sched").innerHTML = `<thead><tr><th class="emp">Team</th>${days.map((d) => `<th class="${d === today ? "today" : ""}">
+      ${dayLabel(d, { weekday: "short" })}<div class="hint">${dayLabel(d, { month: "short", day: "numeric" })}</div></th>`).join("")}</tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot>
+      <tr><th class="emp">Staff hours</th>${perDay.map((p) => `<td>${num(p.hours)}h <span class="hint">· ${p.people} people</span></td>`).join("")}</tr>
+      <tr><th class="emp">Labor cost</th>${perDay.map((p) => `<td>${money(p.labor, 0)}</td>`).join("")}</tr>
+      <tr><th class="emp">Sales recorded</th>${perDay.map((p) => `<td>${p.sales ? money(p.sales, 0) : "–"}${p.sales ? ` <span class="hint">· labor ${pct(p.labor / p.sales)}</span>` : ""}</td>`).join("")}</tr>
+    </tfoot>`;
+
+  if (clash.size) warnings.push(`${clash.size} shifts overlap another shift for the same person (outlined in red).`);
+  if (open.length) warnings.push(`${open.length} open shift${open.length === 1 ? "" : "s"} still need${open.length === 1 ? "s" : ""} someone.`);
+  $("#sched-warnings").innerHTML = warnings.map((w) => `<div class="warn-line">${esc(w)}</div>`).join("");
+  $("#sched-kpis").innerHTML = [
+    ["Scheduled hours", num(W.hours) + "h", `${new Set(shifts.filter((s) => s.employee_id).map((s) => s.employee_id)).size} people`],
+    ["Labor cost", money(W.labor, 0), "hours × hourly rate"],
+    ["Sales recorded", money(W.sales, 0), "this week so far"],
+    ["Labor % of sales", W.sales ? pct(W.labor / W.sales) : "–", W.sales ? "scheduled labor ÷ sales" : "no sales yet", W.sales && W.labor / W.sales > 0.35 ? "warn" : ""],
+    ["Open shifts", open.length, open.length ? "need someone" : "all covered", open.length ? "warn" : ""],
+  ].map(([l, v, s, c]) => `<div class="kpi ${c || ""}"><div class="kpi-l">${l}</div><div class="kpi-v">${esc(v)}</div><div class="kpi-s">${esc(s)}</div></div>`).join("");
+}
+
+$("#wk-prev").addEventListener("click", () => { weekStart = addDays(weekStart, -7); renderSchedule(); });
+$("#wk-next").addEventListener("click", () => { weekStart = addDays(weekStart, 7); renderSchedule(); });
+$("#wk-today").addEventListener("click", () => { weekStart = mondayOf(todayIso()); renderSchedule(); });
+$("#show-former").addEventListener("change", renderSchedule);
+$("#wk-copy").addEventListener("click", async () => {
+  const have = weekStats(weekStart).shifts.length;
+  const prev = weekStats(addDays(weekStart, -7)).shifts.length;
+  if (!prev) return toast("Last week has no shifts to copy", true);
+  if (!confirm(have ? `This week already has ${have} shifts. Add last week's ${prev} shifts as well?` : `Copy last week's ${prev} shifts into this week?`)) return;
+  try {
+    const res = await api("POST", "/api/shifts/copy-week", { from: addDays(weekStart, -7), to: weekStart });
+    toast(`Copied ${res.copied} shifts`);
+  } catch (err) { toast(err.message, true); }
+});
+
+// drag & drop: move a shift, or copy it with Ctrl / Alt held
+$("#sched").addEventListener("dragstart", (e) => {
+  const chip = e.target.closest(".shift");
+  if (!chip) return;
+  e.dataTransfer.setData("text/plain", chip.dataset.id);
+  e.dataTransfer.effectAllowed = "copyMove";
+  chip.classList.add("dragging");
+});
+$("#sched").addEventListener("dragend", () => $$(".dragging, .cell.over").forEach((x) => x.classList.remove("dragging", "over")));
+$("#sched").addEventListener("dragover", (e) => {
+  const cell = e.target.closest(".cell");
+  if (!cell) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = e.ctrlKey || e.altKey ? "copy" : "move";
+  $$(".cell.over").forEach((x) => x !== cell && x.classList.remove("over"));
+  cell.classList.add("over");
+});
+$("#sched").addEventListener("drop", async (e) => {
+  const cell = e.target.closest(".cell");
+  if (!cell) return;
+  e.preventDefault();
+  cell.classList.remove("over");
+  const shift = S.shifts.find((s) => s.id === e.dataTransfer.getData("text/plain"));
+  if (!shift) return;
+  const target = { employee_id: cell.dataset.emp || null, date: cell.dataset.date };
+  const copy = e.ctrlKey || e.altKey;
+  if (!copy && target.date === shift.date && target.employee_id === (shift.employee_id || null)) return;
+  const body = { ...shift, ...target };
+  try {
+    if (copy) { delete body.id; await api("POST", "/api/shifts", body); }
+    else await api("PUT", `/api/shifts/${shift.id}`, body);
+    const who = empById(target.employee_id)?.name || "open shifts";
+    toast(`${copy ? "Copied" : "Moved"} to ${who}, ${dayLabel(target.date, { weekday: "short", month: "short", day: "numeric" })}`);
+  } catch (err) { toast(err.message, true); }
+});
+$("#sched").addEventListener("click", (e) => {
+  const chip = e.target.closest(".shift");
+  if (chip) return openShift(S.shifts.find((s) => s.id === chip.dataset.id));
+  const cell = e.target.closest(".cell");
+  if (cell) return openShift(null, { employee_id: cell.dataset.emp || null, date: cell.dataset.date });
+  const head = e.target.closest("th[data-emp]");
+  if (head) openEmp(empById(head.dataset.emp));
+});
+
+function openShift(shift, defaults = {}) {
+  const emp = empById(defaults.employee_id);
+  editingShift = shift ? { ...shift } : {
+    id: null, employee_id: defaults.employee_id || null, date: defaults.date || weekStart,
+    start: SHIFT_PRESETS[0][1], end: SHIFT_PRESETS[0][2], role: emp?.role || "", notes: "",
+  };
+  const f = $("#shift-form");
+  $("#shift-emp").innerHTML = `<option value="">— Open shift (unassigned) —</option>` +
+    S.employees.filter((e) => e.active || e.id === editingShift.employee_id)
+      .map((e) => `<option value="${esc(e.id)}">${esc(e.name)} (${esc(e.role)})</option>`).join("");
+  ["employee_id", "date", "start", "end", "role", "notes"].forEach((k) => (f.elements[k].value = editingShift[k] || ""));
+  $("#shift-title").textContent = shift ? "Edit shift" : "New shift";
+  $("#shift-delete").hidden = !shift;
+  $("#shift-presets").innerHTML = SHIFT_PRESETS.map(([n, a, b]) => `<button type="button" class="chip" data-a="${a}" data-b="${b}">${n} ${clock(a)}–${clock(b)}</button>`).join("");
+  updateShiftCalc();
+  $("#shift-dialog").showModal();
+}
+function updateShiftCalc() {
+  const f = $("#shift-form").elements;
+  if (!f.start.value || !f.end.value) return ($("#shift-calc").textContent = "");
+  const hours = ((toMin(f.end.value) - toMin(f.start.value) + 1440) % 1440) / 60;
+  const emp = empById(f.employee_id.value);
+  const others = S.shifts.filter((s) => s.employee_id && s.employee_id === f.employee_id.value && s.id !== editingShift.id &&
+    s.date >= mondayOf(f.date.value || weekStart) && s.date <= addDays(mondayOf(f.date.value || weekStart), 6));
+  const week = others.reduce((a, s) => a + s.hours, 0) + hours;
+  $("#shift-calc").innerHTML = `${num(hours)} hours` + (emp ? ` · ${money(hours * emp.hourly_rate)} labor ·
+    <span class="${emp.max_hours && week > emp.max_hours ? "bad-text" : ""}">${num(week)} of ${num(emp.max_hours)}h that week</span>` : "");
+}
+$("#shift-form").addEventListener("input", updateShiftCalc);
+$("#shift-emp").addEventListener("change", () => {
+  const emp = empById($("#shift-emp").value);
+  if (emp && !$("#shift-form").elements.role.value) $("#shift-form").elements.role.value = emp.role;
+});
+$("#shift-presets").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-a]");
+  if (!b) return;
+  const f = $("#shift-form").elements;
+  f.start.value = b.dataset.a;
+  f.end.value = b.dataset.b;
+  updateShiftCalc();
+});
+$("#shift-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target.elements;
+  const body = { id: editingShift.id };
+  ["employee_id", "date", "start", "end", "role", "notes"].forEach((k) => (body[k] = f[k].value));
+  try {
+    await api(body.id ? "PUT" : "POST", body.id ? `/api/shifts/${body.id}` : "/api/shifts", body);
+    $("#shift-dialog").close();
+    weekStart = mondayOf(body.date);
+    renderSchedule();
+    toast("Shift saved");
+  } catch (err) { toast(err.message, true); }
+});
+$("#shift-delete").addEventListener("click", async () => {
+  try { await api("DELETE", `/api/shifts/${editingShift.id}`); $("#shift-dialog").close(); toast("Shift deleted"); }
+  catch (err) { toast(err.message, true); }
+});
+
+function openEmp(emp) {
+  editingEmp = emp ? { ...emp } : { id: null, name: "", role: "", hourly_rate: 15, max_hours: 40, phone: "", email: "", color: "", active: true };
+  const f = $("#emp-form");
+  ["name", "role", "hourly_rate", "max_hours", "phone", "email"].forEach((k) => (f.elements[k].value = editingEmp[k] ?? ""));
+  f.elements.color.value = editingEmp.color || "#3e7cb1";
+  f.elements.active.checked = !!editingEmp.active;
+  $("#emp-title").textContent = emp ? `Edit ${emp.name}` : "New employee";
+  $("#emp-remove").hidden = !emp || !emp.active;
+  const upcoming = emp ? S.shifts.filter((s) => s.employee_id === emp.id && s.date >= todayIso()) : [];
+  $("#emp-summary").textContent = emp ? `${upcoming.length} upcoming shift${upcoming.length === 1 ? "" : "s"}.` : "";
+  $("#emp-dialog").showModal();
+}
+$("#new-emp").addEventListener("click", () => openEmp(null));
+$("#emp-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target.elements;
+  const body = { id: editingEmp.id, active: f.active.checked };
+  ["name", "role", "hourly_rate", "max_hours", "phone", "email", "color"].forEach((k) => (body[k] = f[k].value));
+  if (!editingEmp.id && !editingEmp.color && body.color === "#3e7cb1") body.color = "";  // let the server pick a colour
+  try {
+    await api(body.id ? "PUT" : "POST", body.id ? `/api/employees/${body.id}` : "/api/employees", body);
+    $("#emp-dialog").close();
+    toast(`Saved ${body.name}`);
+  } catch (err) { toast(err.message, true); }
+});
+$("#emp-remove").addEventListener("click", async () => {
+  const upcoming = S.shifts.filter((s) => s.employee_id === editingEmp.id && s.date >= todayIso()).length;
+  if (!confirm(`Remove ${editingEmp.name} from the roster?` + (upcoming ? ` Their ${upcoming} upcoming shifts become open shifts.` : "") +
+    " Past shifts are kept for labor history.")) return;
+  try {
+    const res = await api("DELETE", `/api/employees/${editingEmp.id}`);
+    $("#emp-dialog").close();
+    toast(`${editingEmp.name} removed` + (res.opened_shifts ? ` — ${res.opened_shifts} shifts are now open` : ""));
   } catch (err) { toast(err.message, true); }
 });
 

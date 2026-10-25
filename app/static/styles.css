@@ -150,6 +150,32 @@ legend { font-weight: 700; padding: 0 6px; }
 details { margin-top: 8px; font-size: 13px; }
 .pq { width: 70px; }
 
+/* schedule */
+.wk-label { min-width: 230px; text-align: center; }
+dialog.small { width: min(620px, 96vw); }
+.warn-line { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-weight: 600; font-size: 13px; }
+table.sched { width: 100%; min-width: 1060px; border-collapse: collapse; table-layout: fixed; }
+table.sched th, table.sched td { border: 1px solid var(--line); padding: 6px; vertical-align: top; text-align: left; }
+table.sched thead th { font-size: 13px; background: var(--bg); }
+table.sched th.emp { width: 190px; font-weight: normal; background: var(--card); }
+table.sched th.emp b { font-size: 13.5px; }
+table.sched th[data-emp] { cursor: pointer; }
+table.sched th[data-emp]:hover { background: var(--brand-soft); }
+table.sched .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+table.sched .open-row b { color: var(--warn); }
+table.sched .today { background: var(--brand-soft); }
+td.cell { height: 66px; cursor: cell; }
+td.cell:hover { background: var(--bg); }
+td.cell.over { background: var(--brand-soft); outline: 2px dashed var(--brand); outline-offset: -3px; }
+.shift { display: flex; flex-direction: column; border-left: 4px solid var(--c); background: color-mix(in srgb, var(--c) 13%, var(--card));
+  border-radius: 6px; padding: 4px 7px; margin-bottom: 4px; font-size: 12px; line-height: 1.35; cursor: grab; }
+.shift span { color: var(--muted); }
+.shift i { color: var(--muted); font-size: 11.5px; }
+.shift.open { border-left-style: dashed; }
+.shift.conflict { outline: 2px solid var(--bad); }
+.shift.dragging { opacity: .4; }
+table.sched tfoot th, table.sched tfoot td { font-size: 12.5px; background: var(--bg); }
+
 #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: var(--bg);
   padding: 10px 16px; border-radius: 10px; transition: transform .2s; z-index: 50; max-width: 90vw; }
 #toast.show { transform: translateX(-50%) translateY(0); }

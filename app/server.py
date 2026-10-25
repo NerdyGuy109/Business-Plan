@@ -122,6 +122,27 @@ class Handler(BaseHTTPRequestHandler):
                     body["id"] = obj_id
                 obj = (store.upsert_ingredient if kind == "ingredients" else store.upsert_item)(body)
                 return self._ok({"saved": obj})
+            m = re.match(r"^/api/employees(?:/([\w-]+))?$", path)
+            if m:
+                emp_id = m.group(1)
+                if method == "DELETE":
+                    opened = store.remove_employee(emp_id)
+                    return self._ok({"opened_shifts": opened})
+                if emp_id:
+                    body["id"] = emp_id
+                return self._ok({"saved": store.upsert_employee(body)})
+            if path == "/api/shifts/copy-week" and method == "POST":
+                copied = store.copy_week(body.get("from"), body.get("to"))
+                return self._ok({"copied": len(copied)})
+            m = re.match(r"^/api/shifts(?:/([\w-]+))?$", path)
+            if m:
+                shift_id = m.group(1)
+                if method == "DELETE":
+                    store.delete_shift(shift_id)
+                    return self._ok()
+                if shift_id:
+                    body["id"] = shift_id
+                return self._ok({"saved": store.upsert_shift(body)})
             if path == "/api/images" and method == "POST":
                 ctype, raw = _decode_data_url(body.get("data"))
                 if ctype not in IMAGE_TYPES:

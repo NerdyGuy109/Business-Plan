@@ -15,6 +15,7 @@
       <button data-tab="ingredients">Ingredients</button>
       <button data-tab="sell">Record Sales</button>
       <button data-tab="procurement">Procurement</button>
+      <button data-tab="schedule">Schedule</button>
       <button data-tab="excel">Excel</button>
     </nav>
   </header>
@@ -90,6 +91,25 @@
         <h2>Purchase orders</h2>
         <div id="po-list"></div>
       </div>
+    </section>
+
+    <!-- Schedule -->
+    <section id="tab-schedule" class="tab">
+      <div class="toolbar">
+        <button class="ghost" id="wk-prev" title="Previous week">&#9664;</button>
+        <h2 id="wk-label" class="wk-label"></h2>
+        <button class="ghost" id="wk-next" title="Next week">&#9654;</button>
+        <button class="ghost" id="wk-today">This week</button>
+        <span class="spacer"></span>
+        <label class="check"><input type="checkbox" id="show-former"> Show former staff</label>
+        <button class="ghost" id="wk-copy">Copy last week</button>
+        <button class="primary" id="new-emp">+ Employee</button>
+      </div>
+      <div class="kpis" id="sched-kpis"></div>
+      <div id="sched-warnings"></div>
+      <div class="card flush"><div class="table-wrap"><table id="sched" class="sched"></table></div></div>
+      <p class="hint">Drag a shift to move it to another person or day; hold Ctrl (or Alt/Option) while dropping to copy it.
+        Click an empty spot to add a shift, a shift to edit it, or a name to edit that employee.</p>
     </section>
 
     <!-- Excel -->
@@ -216,6 +236,60 @@
     </form>
   </dialog>
 
+  <!-- Shift editor -->
+  <dialog id="shift-dialog" class="small">
+    <form method="dialog" id="shift-form">
+      <div class="dialog-head">
+        <h2 id="shift-title">New shift</h2>
+        <button type="button" class="ghost" data-close>&#10005;</button>
+      </div>
+      <div class="chips" id="shift-presets"></div>
+      <div class="two">
+        <label>Employee <select name="employee_id" id="shift-emp"></select></label>
+        <label>Date <input name="date" type="date" required></label>
+        <label>Start <input name="start" type="time" required></label>
+        <label>End <input name="end" type="time" required></label>
+        <label>Position <input name="role" list="roles" placeholder="Juicer"></label>
+        <label>Notes <input name="notes"></label>
+      </div>
+      <div class="calc" id="shift-calc"></div>
+      <div class="dialog-foot">
+        <button type="button" class="danger ghost" id="shift-delete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" data-close>Cancel</button>
+        <button type="submit" class="primary">Save shift</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Employee editor -->
+  <dialog id="emp-dialog" class="small">
+    <form method="dialog" id="emp-form">
+      <div class="dialog-head">
+        <h2 id="emp-title">New employee</h2>
+        <button type="button" class="ghost" data-close>&#10005;</button>
+      </div>
+      <div class="two">
+        <label>Name <input name="name" required></label>
+        <label>Role <input name="role" list="roles" placeholder="Juicer"></label>
+        <label>Hourly rate ($) <input name="hourly_rate" type="number" step="0.01" min="0"></label>
+        <label>Max hours / week <input name="max_hours" type="number" step="0.5" min="0"></label>
+        <label>Phone <input name="phone" type="tel"></label>
+        <label>Email <input name="email" type="email"></label>
+        <label>Colour on schedule <input name="color" type="color"></label>
+        <label class="check"><input type="checkbox" name="active"> On the roster</label>
+      </div>
+      <div class="hint" id="emp-summary"></div>
+      <div class="dialog-foot">
+        <button type="button" class="danger ghost" id="emp-remove">Remove from roster</button>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" data-close>Cancel</button>
+        <button type="submit" class="primary">Save employee</button>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="roles"></datalist>
   <datalist id="item-categories"></datalist>
   <datalist id="ing-categories"></datalist>
   <datalist id="suppliers"></datalist>

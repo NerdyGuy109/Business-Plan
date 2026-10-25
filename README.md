@@ -15,7 +15,7 @@ It has two parts that stay in sync:
 
 | | What it's for |
 |---|---|
-| **Website** (`app/`) | Add and edit menu items with a picture and description, build recipes by clicking ingredients, maintain ingredient purchasing info, record sales, create and receive purchase orders. |
+| **Website** (`app/`) | Add and edit menu items with a picture and description, build recipes by clicking ingredients, maintain ingredient purchasing info, record sales, create and receive purchase orders, and schedule staff. |
 | **Excel workbook** (`exports/inventory.xlsx`) | The same data as a spreadsheet with live formulas, for analysis, sharing, or bulk edits. Rewritten automatically after every change on the website; edits made in Excel can be imported back. |
 
 ## Quick start
@@ -43,6 +43,7 @@ Both overwrite `data/catalog.json`.
 | **Ingredients** | All parts with package, cost, landed unit cost, lead time, shelf life, stock, reorder point / par level, recent daily usage and which items use them. Click a row to edit. Deleting is blocked while an ingredient is still in a recipe. |
 | **Record Sales** | Tap items onto a ticket and record the sale. Every ingredient in each recipe is deducted from stock. |
 | **Procurement** | Ingredients at or below their reorder point, grouped by supplier, with suggested package counts (editable). *Create purchase order* → *Mark received* when it arrives adds the stock. |
+| **Schedule** | Weekly staff schedule. Drag a shift to move it to another person or day (hold Ctrl/Alt to copy), click an empty spot to add one, click a name to edit that employee. Shows hours vs. each person's max, labor cost, sales and labor % per day, open shifts and double-bookings. *Copy last week* starts a new week from the previous one. Removing an employee keeps their past shifts for labor history and turns their upcoming shifts into open shifts. |
 | **Excel** | Download the workbook, or import an edited one. |
 
 ### Ingredient purchasing fields
@@ -67,6 +68,9 @@ Both overwrite `data/catalog.json`.
 | Where Used | Matrix of every ingredient × every menu item showing the quantity used. |
 | Procurement | Every ingredient grouped by supplier, REORDER rows highlighted, order totals and expected arrival dates. |
 | Purchase Orders, Sales Log | History from the website. |
+| Staff | Employees with role, hourly rate and max hours per week. |
+| Schedule | One row per shift: date, employee (OPEN if unassigned), start/end, hours and labor cost. |
+| Weekly Hours | Hours per employee per day for one week, with totals, labor cost and over-max flags. Change the Monday date in B1 to view another week. |
 
 Blue header/text = input you can edit; dark green header = formula. To link an ingredient to
 an item in Excel, add a row to **Recipes** with the Item ID, Ingredient ID (or exact
@@ -75,7 +79,7 @@ ingredient name) and quantity. New ingredients added in Excel without an ID get 
 **Bringing Excel edits back:** on the website's Excel tab, upload the workbook (or click
 *Re-read exports/inventory.xlsx* if you edited that file in place). The import reads only the
 input columns of Ingredients, Menu Items and Recipes, validates every reference, and leaves
-sales and purchase orders alone. Close the file in Excel before making more changes on the
+sales, purchase orders, staff and the schedule alone (manage the schedule on the website). Close the file in Excel before making more changes on the
 website, otherwise the website can't rewrite it (you'll get a warning).
 
 From the command line: `python -m app.excel` (export) or `python -m app.excel import path.xlsx`.
