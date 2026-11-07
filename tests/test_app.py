@@ -18,7 +18,7 @@ from http.cookiejar import CookieJar
 TMP = tempfile.mkdtemp(prefix="menu-inventory-tests-")
 os.environ["MENU_DATA_DIR"] = TMP  # must be set before the app modules are imported
 
-from app import auth, pos_import, seed  # noqa: E402
+from app import auth, orders, pos_import, seed  # noqa: E402
 from app.excel import export_workbook, import_workbook  # noqa: E402
 from app.store import Store, ValidationError, shift_hours  # noqa: E402
 
@@ -189,6 +189,69 @@ class PosImportTests(unittest.TestCase):
         pos_import.undo(self.s, entry["id"])
         self.assertEqual(peach["on_hand"], start)
         self.assertFalse(any(x.get("batch") == entry["id"] for x in self.s.data["sales"]))
+
+
+class OrderTests(unittest.TestCase):
+    def setUp(self):
+        self.s = fresh_store()
+        self.peach = ing_named(self.s, "Peach (frozen)")
+        self.pp = item_named(self.s, "Peach Paradise")
+
+    def new(self, **kw):
+        return orders.create_order(self.s, {"channel": "doordash", "items": [{"item_id": self.pp["id"], "qty": 2}], **kw})
+
+    def test_stock_moves_when_making_starts_at_app_price_with_commission(self):
+        start = self.peach["on_hand"]
+        o = self.new()
+        self.assertEqual(self.peach["on_hand"], start)  # nothing made yet
+        self.assertEqual(o["lines"][0]["price"], round(self.pp["price"] * 1.15, 2))  # DoorDash mark-up in sample
+        self.assertAlmostEqual(o["commission"], round(o["subtotal"] * 0.20, 2))
+        orders.set_status(self.s, o["id"], "preparing")
+        self.assertEqual(self.peach["on_hand"], start - 10)
+        sale = [x for x in self.s.data["sales"] if x.get("order_id") == o["id"]][0]
+        self.assertEqual((sale["channel"], sale["price"]), ("doordash", o["lines"][0]["price"]))
+
+    def test_cancel_made_logs_waste_not_made_restores_stock(self):
+        start = self.peach["on_hand"]
+        a = self.new(); orders.set_status(self.s, a["id"], "preparing")
+        orders.cancel(self.s, a["id"], made=True)
+        self.assertEqual(self.peach["on_hand"], start - 10)
+        self.assertEqual(self.s.data["waste"][-1]["reason"], "cancelled order")
+        self.assertFalse(any(x.get("order_id") == a["id"] for x in self.s.data["sales"]))
+        b = self.new(); orders.set_status(self.s, b["id"], "preparing")
+        orders.cancel(self.s, b["id"], made=False)
+        self.assertEqual(self.peach["on_hand"], start - 10)
+
+    def test_unmatched_name_blocks_start_until_matched_and_is_remembered(self):
+        o = orders.receive_webhook(self.s, "ubereats", {"external_id": "X1", "items": [{"name": "Peachy P (24oz)", "qty": 1, "price": 11}]})
+        with self.assertRaises(ValidationError):
+            orders.set_status(self.s, o["id"], "preparing")
+        orders.match_line(self.s, o["id"], 0, self.pp["id"])
+        orders.set_status(self.s, o["id"], "preparing")
+        o2 = orders.receive_webhook(self.s, "ubereats", {"external_id": "X2", "items": [{"name": "peachy p (24oz)", "qty": 1}]})
+        self.assertEqual(o2["lines"][0]["item_id"], self.pp["id"])
+
+    def test_webhook_duplicates_and_cancellation(self):
+        a = orders.receive_webhook(self.s, "doordash", {"external_id": "D9", "items": [{"name": "Peach Paradise", "qty": 1}]})
+        b = orders.receive_webhook(self.s, "doordash", {"external_id": "D9", "items": [{"name": "Peach Paradise", "qty": 1}]})
+        self.assertEqual(a["id"], b["id"])
+        orders.receive_webhook(self.s, "doordash", {"external_id": "D9", "status": "cancelled"})
+        self.assertEqual(a["status"], "cancelled")  # not started: cancelled outright
+
+    def test_signature_check(self):
+        ch = orders.channel(self.s, "doordash")
+        body = b'{"external_id":"Z"}'
+        import hashlib, hmac
+        good = "sha256=" + hmac.new(ch["token"].encode(), body, hashlib.sha256).hexdigest()
+        self.assertTrue(orders.check_signature(ch, body, {"X-Signature": good}))
+        self.assertTrue(orders.check_signature(ch, body, {"Authorization": "Bearer " + ch["token"]}))
+        self.assertFalse(orders.check_signature(ch, body, {"Authorization": "Bearer wrong"}))
+        self.assertFalse(orders.check_signature(ch, body, {}))
+
+    def test_channel_report_keeps_net_of_commission(self):
+        o = self.new(); orders.set_status(self.s, o["id"], "preparing")
+        row = next(r for r in orders.channel_report(self.s, o["placed_at"][:10]) if r["channel"] == "doordash")
+        self.assertAlmostEqual(row["net"], row["gross"] - row["commission"] - row["fees"], places=2)
 
 
 class ScheduleTests(unittest.TestCase):

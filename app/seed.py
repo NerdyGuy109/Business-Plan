@@ -3,6 +3,7 @@
 import random
 from datetime import datetime, timedelta
 
+from . import orders
 from .excel import export_workbook
 from .store import Store, empty_catalog
 
@@ -234,6 +235,60 @@ def _purchase_orders(store, ids):
     kale = store.ingredient(ids["Kale"])
     store.upsert_ingredient({**kale, "package_cost": 18.00})
     store.data["price_changes"][-1]["at"] = f"{day(-4)}T16:20"
+
+    _delivery_orders(store, ids)
+
+
+# Example terms for the sample shop only; each real shop enters the rates from its own agreements.
+SAMPLE_CHANNEL_TERMS = {"doordash": (20, 0.0, 15), "ubereats": (25, 0.0, 15), "grubhub": (20, 0.30, 10), "phone": (0, 0.0, 0)}
+CUSTOMERS = ["Ana R.", "Ben T.", "Chloe M.", "Dev P.", "Eli K.", "Fatima S.", "Gus W.", "Hana L.", "Ivan D.", "Jade N.",
+             "Kai O.", "Lena B.", "Marco V.", "Nia H."]
+
+
+def _delivery_orders(store, ids):
+    """Delivery channels, a week of completed app orders, and today's board in every state."""
+    orders.ensure_channels(store)
+    for ch_id, (pct, fee, markup) in SAMPLE_CHANNEL_TERMS.items():
+        orders.update_channel(store, ch_id, {"commission_pct": pct, "fee_per_order": fee, "markup_pct": markup})
+    stock = {i["id"]: i["on_hand"] for i in store.data["ingredients"]}
+    rng = random.Random(7)
+    items = [i["id"] for i in store.data["items"]]
+    now = datetime.now().replace(second=0, microsecond=0)
+    channels = ["doordash", "doordash", "ubereats", "ubereats", "grubhub", "phone"]
+    for back in range(7, 0, -1):
+        for n in range(rng.randint(8, 14)):
+            placed = (now - timedelta(days=back)).replace(hour=rng.randint(9, 19), minute=rng.randint(0, 59))
+            o = orders.create_order(store, {
+                "channel": rng.choice(channels), "external_id": f"{rng.randint(100000, 999999)}",
+                "customer": rng.choice(CUSTOMERS), "placed_at": placed.isoformat(),
+                "items": [{"item_id": rng.choice(items), "qty": rng.choice([1, 1, 1, 2])} for _ in range(rng.choice([1, 1, 2, 3]))]})
+            orders.set_status(store, o["id"], "completed", by="Sample")
+            o["history"][-1]["at"] = (placed + timedelta(minutes=rng.randint(8, 20))).isoformat(timespec="minutes")
+    today = [  # (minutes ago, channel, status, items, notes)
+        (2, "doordash", "new", [("MI-005", 1), ("MI-001", 1)], ""),
+        (4, "ubereats", "new", [("MI-009", 2)], "Allergy: tree nuts. Please make with oat milk if possible."),
+        (9, "grubhub", "preparing", [("MI-007", 1), ("MI-004", 2)], ""),
+        (14, "phone", "ready", [("MI-002", 1)], "Pickup: Sam"),
+    ]
+    for ago, ch, status, lines, notes in today:
+        placed = now - timedelta(minutes=ago)
+        o = orders.create_order(store, {"channel": ch, "external_id": f"{rng.randint(100000, 999999)}",
+                                        "customer": rng.choice(CUSTOMERS), "placed_at": placed.isoformat(), "notes": notes,
+                                        "items": [{"item_id": i, "qty": q} for i, q in lines]})
+        if status != "new":
+            orders.set_status(store, o["id"], "preparing", by="Sample")
+        if status == "ready":
+            orders.set_status(store, o["id"], "ready", by="Sample")
+    # Arrived through an order hub with a name the menu doesn't know yet.
+    orders.receive_webhook(store, "ubereats", {"external_id": "UE-7F3K2", "customer": "Omar Q.",
+                                               "placed_at": (now - timedelta(minutes=1)).isoformat(),
+                                               "items": [{"name": "Green Machine Juice (16oz)", "qty": 1, "price": 10.29},
+                                                         {"name": "Mint Lemonade", "qty": 1, "price": 6.33}]})
+    store.data.setdefault("integration_log", []).append(
+        {"at": (now - timedelta(minutes=1)).isoformat(timespec="seconds"), "channel": "ubereats",
+         "result": f"ok: {store.data['orders'][-1]['id']} new (needs matching)"})
+    for ing in store.data["ingredients"]:
+        ing["on_hand"] = stock[ing["id"]]
 
 
 if __name__ == "__main__":

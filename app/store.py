@@ -28,7 +28,7 @@ IMAGE_DIR = os.path.join(DATA_DIR, "images")
 ALLERGENS = ["milk", "eggs", "fish", "shellfish", "tree nuts", "peanuts", "wheat", "soy", "sesame"]
 
 WASTE_REASONS = ["expired / spoiled", "spilled / dropped", "damaged", "remade drink", "staff drink",
-                 "free / comped drink", "prep trim", "other"]
+                 "free / comped drink", "cancelled order", "prep trim", "other"]
 
 DEFAULT_SETTINGS = {"business_name": "", "target_food_cost": 0.35}
 
@@ -113,7 +113,7 @@ def _next_id(prefix, existing):
 def empty_catalog():
     return {"settings": dict(DEFAULT_SETTINGS), "ingredients": [], "items": [], "sales": [], "purchase_orders": [],
             "employees": [], "shifts": [], "price_changes": [], "pos_aliases": {}, "imports": [],
-            "counts": [], "waste": []}
+            "counts": [], "waste": [], "channels": [], "orders": []}
 
 
 def clean_allergens(value):
@@ -356,10 +356,9 @@ class Store:
                 })
             revenue_by_date = {}
             for sale in self.data["sales"]:
-                it = self.item(sale["item_id"])
-                if it:
+                if self.item(sale["item_id"]):
                     d = sale["date"][:10]
-                    revenue_by_date[d] = revenue_by_date.get(d, 0) + it["price"] * sale["qty"]
+                    revenue_by_date[d] = revenue_by_date.get(d, 0) + self.sale_price(sale) * sale["qty"]
             cutoff = (date.today() - timedelta(days=PRICE_ALERT_DAYS)).isoformat()
             return {
                 "settings": self.data["settings"],
@@ -509,14 +508,25 @@ class Store:
                     raise ValidationError(f"Unknown menu item '{line.get('item_id')}'")
                 qty = _coerce(line.get("qty"), int, 0)
                 if qty > 0:
-                    clean.append((item, qty, line.get("date") or when))
-            for item, qty, at in clean:
+                    clean.append((item, qty, line))
+            for item, qty, line in clean:
                 self._apply_recipe(item, -qty)
-                sale = {"date": at, "item_id": item["id"], "qty": qty}
+                sale = {"date": line.get("date") or when, "item_id": item["id"], "qty": qty}
                 if batch:
                     sale["batch"] = batch
+                for key in ("channel", "order_id"):  # where the sale came from (delivery apps, imports)
+                    if line.get(key):
+                        sale[key] = line[key]
+                if line.get("price") not in (None, ""):  # the price actually charged, if not the menu price
+                    sale["price"] = round(float(line["price"]), 2)
                 self.data["sales"].append(sale)
             return len(clean)
+
+    def sale_price(self, sale):
+        if "price" in sale:
+            return sale["price"]
+        item = self.item(sale["item_id"])
+        return item["price"] if item else 0
 
     def _apply_recipe(self, item, qty):
         """Move stock for `qty` servings of an item (negative = used up)."""

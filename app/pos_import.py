@@ -26,6 +26,7 @@ GUESSES = {
     "size": [r"price point", r"^variation", r"^size$", r"variant"],
     "qty": [r"^qty$", r"^quantity$", r"(items|units|qty|quantity) ?sold", r"qty|quantity|count"],
     "type": [r"event type", r"^type$", r"transaction type"],
+    "amount": [r"^gross sales$", r"^(item )?subtotal$", r"^(item )?(price|amount)$", r"^sales$", r"gross"],
 }
 DATE_FORMATS = ["%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y", "%d-%b-%Y", "%b %d, %Y", "%Y/%m/%d"]
 TIME_FORMATS = ["%H:%M:%S", "%H:%M", "%I:%M:%S %p", "%I:%M %p", "%I:%M%p"]
@@ -137,10 +138,11 @@ def analyse(store: Store, text, mapping=None, aliases=None):
         if qty <= 0:
             skip("zero or negative quantity (refunds)")
             continue
+        amount = _qty(cell(row, "amount")) if "amount" in idx else None
         g = groups.setdefault(name.lower(), {"pos_name": name, "rows": 0, "qty": 0, "entries": []})
         g["rows"] += 1
         g["qty"] += qty
-        g["entries"].append((when, qty))
+        g["entries"].append((when, qty, round(amount / qty, 2) if amount else None))
     aliases = {k.strip().lower(): v for k, v in (aliases or {}).items()}
     for key, g in sorted(groups.items(), key=lambda kv: -kv[1]["qty"]):
         if key in aliases:
@@ -149,8 +151,11 @@ def analyse(store: Store, text, mapping=None, aliases=None):
             target, how = _match(store, g["pos_name"])
         g.update(item_id=target, matched_by=how)
         if target and target != IGNORE and store.item(target):
-            for when, qty in g["entries"]:
-                result["sales"].append({"item_id": target, "qty": qty, "date": when})
+            for when, qty, unit_price in g["entries"]:
+                sale = {"item_id": target, "qty": qty, "date": when}
+                if unit_price is not None:
+                    sale["price"] = unit_price  # what was actually charged (delivery apps often charge more)
+                result["sales"].append(sale)
         result["groups"].append({k: v for k, v in g.items() if k != "entries"})
     if result["sales"]:
         dates = sorted(s["date"] for s in result["sales"])
@@ -158,8 +163,11 @@ def analyse(store: Store, text, mapping=None, aliases=None):
     return result
 
 
-def commit(store: Store, text, mapping=None, aliases=None, filename="", force=False):
+def commit(store: Store, text, mapping=None, aliases=None, filename="", force=False, channel=""):
+    """`channel`: tag every sale as coming from a delivery app (e.g. a DoorDash order report)."""
     with store.lock:
+        if channel and not any(c["id"] == channel for c in store.data.get("channels", [])):
+            raise ValidationError(f"Unknown channel '{channel}'")
         a = analyse(store, text, mapping, aliases)
         if a["missing"]:
             raise ValidationError(f"Choose the column for: {', '.join(a['missing'])}")
@@ -177,11 +185,12 @@ def commit(store: Store, text, mapping=None, aliases=None, filename="", force=Fa
         for g in a["groups"]:  # remember choices for next time
             store.data["pos_aliases"][g["pos_name"].strip().lower()] = g["item_id"]
         batch = _next_id("IMP", [i["id"] for i in store.data["imports"]])
-        count = store.record_sales([{**s, "qty": int(s["qty"])} for s in a["sales"]], batch=batch)
+        count = store.record_sales([{**s, "qty": int(s["qty"]), **({"channel": channel} if channel else {})}
+                                    for s in a["sales"]], batch=batch)
         entry = {"id": batch, "at": datetime.now().isoformat(timespec="minutes"), "filename": filename,
                  "hash": a["hash"], "rows": a["rows"], "sales": count,
                  "drinks": int(sum(s["qty"] for s in a["sales"])), "first": a["first"], "last": a["last"],
-                 "skipped": a["skipped"]}
+                 "skipped": a["skipped"], "channel": channel}
         store.data["imports"].append(entry)
         return entry
 

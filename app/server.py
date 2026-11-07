@@ -15,12 +15,12 @@ import mimetypes
 import os
 import re
 import tempfile
-from datetime import date
+from datetime import date, datetime, timedelta
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlparse
 
-from . import backup, pos_import
+from . import backup, orders, pos_import
 from .auth import RANK, ROLES, SESSION_HOURS, Users
 from .excel import EXPORT_PATH, export_listener, export_workbook, import_workbook
 from .store import IMAGE_DIR, ROOT, Store, ValidationError
@@ -43,9 +43,13 @@ STAFF_ROUTES = [
     ("POST", r"/api/waste"),
     ("POST", r"/api/me/password"),
     ("POST", r"/api/logout"),
+    ("POST", r"/api/orders"),
+    ("POST", r"/api/orders/[\w-]+/(status|cancel|match)"),
 ]
 OWNER_ROUTES = [
     ("PUT", r"/api/settings"),
+    ("PUT", r"/api/channels/[\w-]+"),
+    ("POST", r"/api/channels/[\w-]+/token"),
     ("GET", r"/api/backup\.zip"),
     ("GET", r"/api/backups/[\w.-]+"),
 ]
@@ -76,6 +80,17 @@ def snapshot_for(user):
     elif user["role"] == "manager":  # managers look after staff accounts
         snap["users"] = [Users.public(u) for u in users.users if u["role"] == "staff" or u["username"] == user["username"]]
     snap["roles"] = ROLES
+    # delivery apps: channel settings (webhook secrets for the owner only), recent orders, sales by channel
+    owner = user["role"] == "owner"
+    snap["channels"] = [c if owner else {k: v for k, v in c.items() if k != "token"} for c in store.data["channels"]]
+    cutoff = (date.today() - timedelta(days=14)).isoformat()
+    snap["orders"] = [o for o in store.data["orders"]
+                      if o["status"] in ("new", "preparing", "ready") or o["placed_at"][:10] >= cutoff]
+    monday = date.today() - timedelta(days=date.today().weekday())
+    snap["channel_report"] = {"today": orders.channel_report(store, date.today().isoformat()),
+                              "week": orders.channel_report(store, monday.isoformat())}
+    if RANK[user["role"]] >= RANK["manager"]:
+        snap["integration_log"] = store.data.get("integration_log", [])[-30:][::-1]
     return snap
 
 
@@ -212,7 +227,38 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {"error": "Not found"})
 
     def do_POST(self):
+        m = re.fullmatch(r"/api/integrations/([\w-]+)/orders", urlparse(self.path).path)
+        if m:
+            return self._webhook(m.group(1))
         self._mutate("POST")
+
+    def _webhook(self, ch_id):
+        """Orders pushed by an order hub or automation: no sign-in; signed with the channel's secret."""
+        def log(result):
+            entries = store.data.setdefault("integration_log", [])
+            entries.append({"at": datetime.now().isoformat(timespec="seconds"), "channel": ch_id, "result": result})
+            del entries[:-50]
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            if length > 1024 * 1024:
+                return self._send(413, {"error": "Too large"})
+            raw = self.rfile.read(length)
+            ch = next((c for c in store.data["channels"] if c["id"] == ch_id), None)
+            if not ch or not orders.check_signature(ch, raw, self.headers):
+                with store.lock:
+                    log("refused: unknown channel or wrong secret")
+                    store.save()
+                return self._send(401, {"error": "Unknown channel or wrong secret"})
+            with store.lock:
+                o = orders.receive_webhook(store, ch_id, json.loads(raw or b"{}"))
+                log(f"ok: {o['id']} {o['status']}" + (" (needs matching)" if any(not l["item_id"] for l in o["lines"]) else ""))
+            store.save()
+            return self._send(200, {"order": o["id"], "status": o["status"]})
+        except (ValidationError, ValueError, KeyError) as e:
+            with store.lock:
+                log(f"rejected: {e}")
+                store.save()
+            return self._send(400, {"error": str(e)})
 
     def do_PUT(self):
         self._mutate("PUT")
@@ -317,7 +363,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/sales-import" and method == "POST":
                 backup.snapshot(store, "before-sales-import")
                 entry = pos_import.commit(store, body.get("csv", ""), body.get("mapping"), body.get("aliases"),
-                                          body.get("filename", ""), bool(body.get("force")))
+                                          body.get("filename", ""), bool(body.get("force")), body.get("channel") or "")
                 return self._ok({"imported": entry})
             m = re.match(r"^/api/sales-import/([\w-]+)/undo$", path)
             if m and method == "POST":
@@ -332,6 +378,26 @@ class Handler(BaseHTTPRequestHandler):
             if m and method == "DELETE":
                 store.delete_waste(m.group(1))
                 return self._ok()
+            if path == "/api/orders" and method == "POST":
+                o = orders.create_order(store, body, "manual", by=self.user["name"])
+                if body.get("start"):
+                    orders.set_status(store, o["id"], "preparing", by=self.user["name"])
+                return self._ok({"saved": o})
+            m = re.fullmatch(r"/api/orders/([\w-]+)/(status|cancel|match)", path)
+            if m and method == "POST":
+                order_id, action = m.groups()
+                if action == "status":
+                    o = orders.set_status(store, order_id, body.get("status"), by=self.user["name"])
+                elif action == "cancel":
+                    o = orders.cancel(store, order_id, made=bool(body.get("made")), by=self.user["name"],
+                                      reason=body.get("reason", ""), employee=self.user.get("employee_id", ""))
+                else:
+                    o = orders.match_line(store, order_id, body.get("index"), body.get("item_id"))
+                return self._ok({"saved": o})
+            m = re.fullmatch(r"/api/channels/([\w-]+)(/token)?", path)
+            if m:
+                ch = orders.new_token(store, m.group(1)) if m.group(2) else orders.update_channel(store, m.group(1), body)
+                return self._ok({"saved": {k: v for k, v in ch.items() if k != "token"}})
             if path == "/api/settings" and method == "PUT":
                 store.update_settings(body)
                 return self._ok()
@@ -388,6 +454,9 @@ def main():
         store.save()
     elif not os.path.exists(EXPORT_PATH):
         export_workbook(store)
+    if not store.data["channels"]:  # delivery-app channels, for catalogs made before they existed
+        orders.ensure_channels(store)
+        store.save()
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     shown = "localhost" if args.host in ("0.0.0.0", "127.0.0.1") else args.host
     print(f"Menu & inventory manager running at http://{shown}:{args.port}")

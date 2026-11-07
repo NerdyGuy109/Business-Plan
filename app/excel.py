@@ -512,20 +512,46 @@ def export_workbook(store: Store, path=EXPORT_PATH):
 
     # --- Sales Log -------------------------------------------------------------
     ws = wb.create_sheet("Sales Log")
-    for c, (header, width) in enumerate([("Date / Time", 20), ("Item ID", 10), ("Qty", 7),
-                                         ("Item Name", 24), ("Revenue ($)", 12)], start=1):
+    chans = {c["id"]: c["name"] for c in data.get("channels", [])}
+    for c, (header, width) in enumerate([("Date / Time", 20), ("Item ID", 10), ("Qty", 7), ("Item Name", 24),
+                                         ("Revenue ($)", 12), ("Channel", 16), ("Order", 10), ("Price Each ($)", 11)],
+                                        start=1):
         cell = ws.cell(row=1, column=c, value=header)
         cell.font, cell.fill = HEADER, HEADER_FILL
         ws.column_dimensions[get_column_letter(c)].width = width
+    price = col(ITEM_COLS, "Price ($)")
     for r, s in enumerate(sales, start=2):
         _style_cell(ws.cell(row=r, column=1, value=s["date"].replace("T", " ")), "in", None)
         _style_cell(ws.cell(row=r, column=2, value=s["item_id"]), "in", None)
         _style_cell(ws.cell(row=r, column=3, value=s["qty"]), "in", "0")
         _style_cell(ws.cell(row=r, column=4, value=item_lookup("Name", f"B{r}")), "link", None)
-        price = col(ITEM_COLS, "Price ($)")
+        # the price actually charged (delivery apps) if recorded, otherwise the menu price
         _style_cell(ws.cell(row=r, column=5,
-                            value=f"=IFERROR(C{r}*INDEX('Menu Items'!${price}$2:${price}${n_items},"
-                                  f"MATCH(B{r},{ITM},0)),0)"), "f", MONEY)
+                            value=f"=IF(H{r}<>\"\",C{r}*H{r},IFERROR(C{r}*INDEX('Menu Items'!${price}$2:${price}${n_items},"
+                                  f"MATCH(B{r},{ITM},0)),0))"), "f", MONEY)
+        _style_cell(ws.cell(row=r, column=6, value=chans.get(s.get("channel"), "In store")), "in", None)
+        _style_cell(ws.cell(row=r, column=7, value=s.get("order_id", "")), "in", None)
+        _style_cell(ws.cell(row=r, column=8, value=s.get("price")), "in", MONEY)
+    ws.freeze_panes = "A2"
+
+    # --- Delivery Orders ----------------------------------------------------------
+    ws = wb.create_sheet("Delivery Orders")
+    oc = [("Order", 9), ("Channel", 15), ("App Order #", 12), ("Placed", 16), ("Status", 11), ("Customer", 14),
+          ("Items", 44), ("Customers Paid ($)", 11), ("Commission ($)", 11), ("Fee ($)", 9), ("You Keep ($)", 11), ("Notes", 30)]
+    for c, (header, width) in enumerate(oc, start=1):
+        cell = ws.cell(row=1, column=c, value=header)
+        cell.font, cell.fill = HEADER, HEADER_FILL
+        cell.alignment = Alignment(wrap_text=True, vertical="center")
+        ws.column_dimensions[get_column_letter(c)].width = width
+    for r, o in enumerate(sorted(data.get("orders", []), key=lambda x: x["placed_at"], reverse=True), start=2):
+        vals = [o["id"], chans.get(o["channel"], o["channel"]), o["external_id"], o["placed_at"].replace("T", " "), o["status"],
+                o["customer"], ", ".join(f"{l['qty']} x {l['name']}" for l in o["lines"]), o["subtotal"], o["commission"],
+                o["fee"], f"=H{r}-I{r}-J{r}", o.get("notes", "")]
+        for c, v in enumerate(vals, start=1):
+            _style_cell(ws.cell(row=r, column=c, value=v), "f" if c == 11 else "in", MONEY if 8 <= c <= 11 else None)
+    ws.conditional_formatting.add(f"A2:L{max(len(data.get('orders', [])) + 1, 2)}",
+                                  FormulaRule(formula=['$E2="cancelled"'], fill=PatternFill("solid", fgColor="EEEEEE")))
+    ws.auto_filter.ref = f"A1:L{max(len(data.get('orders', [])) + 1, 2)}"
     ws.freeze_panes = "A2"
 
     _schedule_sheets(wb, store)

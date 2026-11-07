@@ -56,6 +56,7 @@ folder into the new one before starting it.
 | **Record Sales** | Tap items onto a ticket and record the sale. Every ingredient in each recipe is deducted from stock. Each drink button shows its allergens. |
 | **Import sales** (on Record Sales) | Load the item-sales CSV export from Square, Toast, Clover or similar. Columns (date, time, item, size, quantity, refund type) are detected automatically and can be changed. Names are matched to menu items by name or by a match you chose before; anything that isn't a drink (gift cards) can be ignored. Refunds are skipped, the same file can't be loaded twice by accident, and any import can be undone, which puts its ingredients back in stock. A sample export is in `docs/samples/`. |
 | **Procurement** | Ingredients at or below their reorder point, grouped by supplier, with suggested package counts (editable). *Create purchase order*; *Receive…* opens it on the Receiving tab. |
+| **Orders** | Delivery and pickup orders (DoorDash, Uber Eats, Grubhub, phone/website) on one board: **New → Preparing → Ready → Picked up**, with due times, allergy notes and an optional sound for new orders. Orders arrive three ways: typed in from the app's tablet (**+ New order**), pushed live by an order hub (see below), or loaded from an app's order report through the sales import with "These sales came from" set to the app. Ingredients come out of stock when an order starts; the sale is recorded at the price the app charged and tagged with the channel. Cancelling a started order asks whether the drinks were made (logged as waste) or not (stock goes back). A list shows drinks to pause on the apps because stock can't make them. Managers see **sales by channel** (what customers paid, commission, fees, what you keep) and **profit per drink on each app**. |
 | **Receiving** | Check in a delivery: pick the order (overdue and due-today orders are flagged), choose who received it, confirm the date/time and tracking or invoice number, then tick each item that arrived in good condition or enter how many arrived OK and how many were damaged, with a note. Flag damaged outer packaging or wrong items and add delivery notes. Submitting adds the good packages to stock; missing or damaged items stay on order (the order shows as *partly received*) unless you tick "nothing else is coming" to close it short. *Log a delay* records what the supplier said and a new expected date. Every delivery appears in the receiving log. |
 | **Schedule** | Weekly staff schedule. Drag a shift to move it to another person or day (hold Ctrl/Alt to copy), click an empty spot to add one, click a name to edit that employee. Shows hours vs. each person's max, labor cost, sales and labor % per day, open shifts and double-bookings. *Copy last week* starts a new week from the previous one. Removing an employee keeps their past shifts for labor history and turns their upcoming shifts into open shifts. |
 | **Counts & Waste** | **Stock count:** enter what's really on the shelf; on-hand becomes the count and the variance report shows each difference in units, dollars and as a share of what sales and waste say was used since the last count (over-portioning, unlogged waste, mistakes or theft). **Waste log:** record ingredients or whole drinks thrown away, spilled, remade, drunk by staff or given away, with reason and cost; this week's waste is totalled by reason. |
@@ -65,6 +66,17 @@ folder into the new one before starting it.
 The **Dashboard** also lists ingredient **cost changes** from the last 30 days, whether entered by hand,
 taken from an invoice price while receiving, or imported from Excel, with what each did to the food cost
 of the drinks that use it, and which drinks are above the target.
+
+### Connecting delivery apps
+
+DoorDash and Uber Eats only send orders directly to software from approved integration partners, so a small shop
+usually connects them through an **order hub** (Deliverect, Otter, Chowly and similar) or an automation tool that
+can post each order onward. On **Settings → Delivery apps** the owner sets each app's commission %, fee per order
+and price mark-up, and finds each channel's address (`/api/integrations/<channel>/orders`) and secret. Orders
+are sent as JSON with `Authorization: Bearer <secret>` or an `X-Signature: sha256=<HMAC>` header; the expected
+format is shown on that page. Sending the same order twice is ignored; `{"external_id": "...", "status": "cancelled"}`
+cancels one. Names the menu doesn't know are matched once on the board and remembered. Every attempt is listed under
+"Recent connection activity". Without a hub, staff type orders in from the app's tablet.
 
 ### Who can do what
 
@@ -103,6 +115,7 @@ is temporary: the person is asked to choose their own the next time they sign in
 | Price Changes | Every ingredient cost change and its effect on each drink's food cost. |
 | Stock Counts | Each count line: expected, counted, variance in units and dollars, and as a share of usage. |
 | Waste Log | Everything logged as wasted, with reason and cost. |
+| Delivery Orders | Every app order: customers paid, commission, fee and what you keep. Sales Log also shows each sale's channel and price. |
 | Purchase Orders | Each order line with packages ordered, received OK, damaged and still outstanding. |
 | Receiving Log | Every delivery checked in: when, who, tracking/invoice #, late, damage, shortages and notes. |
 | Sales Log | Sales recorded on the website. |
@@ -128,6 +141,7 @@ From the command line: `python -m app.excel` (export) or `python -m app.excel im
 app/server.py      web server + JSON API (Python standard library), sign-in and role checks
 app/store.py       data model and business rules (costing, yield, reorder, sales, receiving, counts, waste)
 app/pos_import.py  till-system CSV import
+app/orders.py      delivery-app orders, channels, webhook, sales by channel
 app/auth.py        users, passwords, sessions, roles
 app/backup.py      automatic daily backups, full-backup zip, restore
 app/excel.py       Excel export/import
@@ -176,6 +190,6 @@ opening that file in Chrome and choosing Print → Save as PDF (Letter, margins 
 ```bash
 python -m unittest discover tests
 ```
-29 automated checks cover costing, yields, allergens, price-change tracking, sales, receiving, counts, waste,
+35 automated checks cover delivery-app orders, costing, yields, allergens, price-change tracking, sales, receiving, counts, waste,
 the POS import, scheduling, the Excel round trip, passwords and lockout, and the web server's role and CSRF
 rules. They run against a throwaway folder and never touch your data.

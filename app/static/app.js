@@ -77,6 +77,9 @@ function render() {
   renderReceiving();
   renderSettings();
   renderAccount();
+  renderOrders();
+  renderChannelSettings();
+  noticeNewOrders();
   renderStock();
   renderImportHistory();
   if ($("#item-dialog").open) renderBuilder();
@@ -1211,7 +1214,8 @@ $("#ws-log").addEventListener("click", async (e) => {
 });
 
 // ------------------------------------------------------------- sales import
-const IMP_FIELDS = [["date", "Date"], ["time", "Time"], ["item", "Item name"], ["size", "Size / variation"], ["qty", "Quantity"], ["type", "Payment / refund type"]];
+const IMP_FIELDS = [["date", "Date"], ["time", "Time"], ["item", "Item name"], ["size", "Size / variation"], ["qty", "Quantity"],
+  ["amount", "Amount charged"], ["type", "Payment / refund type"]];
 let imp = null;  // { text, filename, preview, mapping, aliases }
 
 async function previewImport() {
@@ -1242,6 +1246,8 @@ function renderImport() {
   box.innerHTML = `
     <h3>${esc(imp.filename)} <span class="hint">· ${p.rows} rows${p.first ? ` · ${esc(p.first)}${p.last !== p.first ? ` to ${esc(p.last)}` : ""}` : ""}</span></h3>
     ${p.already_imported ? `<div class="warn-line">This exact file was already imported on ${esc(p.already_imported.at.slice(0, 10))} (${esc(p.already_imported.id)}). Importing again would count those sales twice.</div>` : ""}
+    <label class="imp-source">These sales came from <select id="imp-channel"><option value="">In store (your till)</option>
+      ${(S.channels || []).map((c) => `<option value="${esc(c.id)}" ${imp.channel === c.id ? "selected" : ""}>${esc(c.name)} (an order report from the app)</option>`).join("")}</select></label>
     <div class="imp-map">${IMP_FIELDS.map(([f, label]) => `<label>${label}${["date", "item", "qty"].includes(f) ? " *" : ""}
       <select data-map="${f}">${opts(p.mapping[f])}</select></label>`).join("")}</div>
     ${p.missing.length ? `<div class="warn-line">Choose the column for: ${p.missing.map(esc).join(", ")}</div>` : `
@@ -1261,7 +1267,7 @@ function renderImport() {
 function renderImportHistory() {
   const list = S.imports || [];
   $("#imp-history").innerHTML = list.length ? `<table class="data compact"><tr><th>Imported</th><th>File</th><th>Sales dates</th><th class="r">Drinks</th><th>Skipped</th><th></th></tr>` +
-    list.map((i) => `<tr class="${i.undone ? "muted" : ""}"><td>${esc(i.at.replace("T", " "))}</td><td>${esc(i.filename || i.id)}</td>
+    list.map((i) => `<tr class="${i.undone ? "muted" : ""}"><td>${esc(i.at.replace("T", " "))}</td><td>${esc(i.filename || i.id)}${i.channel ? ` ${chBadge(i.channel)}` : ""}</td>
       <td>${esc(i.first || "")}${i.last && i.last !== i.first ? ` to ${esc(i.last)}` : ""}</td><td class="r">${num(i.drinks)}</td>
       <td class="hint">${Object.entries(i.skipped || {}).map(([w, n]) => `${n} ${esc(w)}`).join(", ") || "–"}</td>
       <td>${i.undone ? `<span class="pill">undone</span>` : `<button class="ghost small" data-undo="${esc(i.id)}">Undo</button>`}</td></tr>`).join("") + `</table>`
@@ -1275,6 +1281,7 @@ $("#imp-file").addEventListener("change", async (e) => {
   previewImport();
 });
 $("#imp-preview").addEventListener("change", (e) => {
+  if (e.target.id === "imp-channel") { imp.channel = e.target.value; return; }
   if (e.target.dataset.map) {
     imp.mapping = { ...imp.mapping, [e.target.dataset.map]: e.target.value };
     if (!e.target.value) delete imp.mapping[e.target.dataset.map];
@@ -1291,7 +1298,8 @@ $("#imp-preview").addEventListener("click", async (e) => {
     const again = imp.preview.already_imported;
     if (again && !confirm("This file was imported before. Import it again anyway? Sales would be counted twice.")) return;
     try {
-      const res = await api("POST", "/api/sales-import", { csv: imp.text, mapping: imp.mapping, aliases: imp.aliases, filename: imp.filename, force: !!again });
+      const res = await api("POST", "/api/sales-import", { csv: imp.text, mapping: imp.mapping, aliases: imp.aliases, filename: imp.filename,
+        force: !!again, channel: imp.channel || "" });
       toast(`Imported ${num(res.imported.drinks)} drinks — stock updated`);
       imp = null; $("#imp-file").value = ""; renderImport();
     } catch (err) { toast(err.message, true); }
@@ -1302,6 +1310,320 @@ $("#imp-history").addEventListener("click", async (e) => {
   if (!id || !confirm(`Undo import ${id}? Its sales are removed and their ingredients put back in stock.`)) return;
   try { await api("POST", `/api/sales-import/${id}/undo`); toast(`${id} undone`); } catch (err) { toast(err.message, true); }
 });
+
+// ------------------------------------------------------------------ orders
+const chById = (id) => (S.channels || []).find((c) => c.id === id);
+const chBadge = (id) => { const c = chById(id); return `<span class="ch-badge" style="--c:${esc(c?.color || "#777")}">${esc(c?.name || id || "In store")}</span>`; };
+const minutesUntil = (iso) => Math.round((Date.parse(iso) - Date.now()) / 60000);
+const ORD_OPEN = ["new", "preparing", "ready"];
+let knownNew = null;          // order ids already seen as new (to sound an alert for fresh ones)
+let ordPeriod = "week";
+let newOrder = null;          // draft for the New order dialog
+let cancelling = null;
+
+function dueText(o) {
+  const m = minutesUntil(o.due_at);
+  if (o.status === "ready") return `<span class="pill good">ready</span>`;
+  return m < 0 ? `<span class="pill bad">${-m} min late</span>` : `<span class="pill ${m <= 5 ? "warn" : ""}">due in ${m} min</span>`;
+}
+
+function renderOrders() {
+  const open = (S.orders || []).filter((o) => ORD_OPEN.includes(o.status));
+  const badge = $("#ord-badge");
+  const fresh = open.filter((o) => o.status === "new").length;
+  badge.hidden = !fresh;
+  badge.textContent = fresh;
+  $("#ord-summary").textContent = `${open.length} open · ${(S.orders || []).filter((o) => o.status === "completed" && o.placed_at.slice(0, 10) === todayIso()).length} picked up today`;
+
+  // drinks that can't be made should be paused on the apps
+  const out = S.items.filter((i) => i.active && i.can_make === 0);
+  const low = S.items.filter((i) => i.active && i.can_make > 0 && i.can_make <= 5);
+  $("#ord-pause").innerHTML = out.length || low.length ? `<div class="warn-line">Pause on the delivery apps: ${out.map((i) => `<b>${esc(i.name)}</b>`).join(", ") || "none"}
+    ${low.length ? ` · running low: ${low.map((i) => `${esc(i.name)} (${i.can_make} left)`).join(", ")}` : ""}</div>` : "";
+
+  const col = (status, title) => {
+    const list = open.filter((o) => o.status === status).sort((a, b) => a.due_at.localeCompare(b.due_at));
+    return `<div class="ord-col"><h3>${title} <span class="pill">${list.length}</span></h3>${list.map(orderCard).join("") || '<p class="hint">Nothing here.</p>'}</div>`;
+  };
+  $("#ord-board").innerHTML = col("new", "New") + col("preparing", "Preparing") + col("ready", "Ready for pickup");
+
+  const filter = $("#ord-filter").value;
+  $("#ord-filter").innerHTML = `<option value="">All channels</option>` + (S.channels || []).map((c) => `<option value="${esc(c.id)}" ${c.id === filter ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+  const done = (S.orders || []).filter((o) => !ORD_OPEN.includes(o.status) && (!filter || o.channel === filter))
+    .sort((a, b) => b.placed_at.localeCompare(a.placed_at)).slice(0, 40);
+  $("#ord-recent").innerHTML = done.length ? `<tr><th>Placed</th><th>Channel</th><th>Order</th><th>Customer</th><th>Items</th><th class="r">Total</th><th class="r mgr-only">You keep</th><th>Status</th></tr>` +
+    done.map((o) => `<tr class="${o.status === "cancelled" ? "muted" : ""}"><td>${esc(o.placed_at.replace("T", " "))}</td><td>${chBadge(o.channel)}</td>
+      <td>${esc(o.external_id || o.id)}</td><td>${esc(o.customer)}</td><td>${o.lines.map((l) => `${l.qty} × ${esc(l.name)}`).join(", ")}</td>
+      <td class="r">${money(o.subtotal)}</td><td class="r mgr-only">${money(o.net)}</td>
+      <td>${o.status === "cancelled" ? `<span class="pill">cancelled${o.made_before_cancel ? ", wasted" : ""}</span>` : '<span class="pill good">picked up</span>'}</td></tr>`).join("")
+    : `<tr><td class="hint">No finished orders yet.</td></tr>`;
+
+  renderChannelReport();
+  renderProfitByChannel();
+}
+
+function orderCard(o) {
+  const unmatched = o.lines.some((l) => !l.item_id);
+  const itemOpts = `<option value="">— which menu item? —</option>` + S.items.map((i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join("");
+  const lines = o.lines.map((l, i) => {
+    const it = itemById(l.item_id);
+    return `<li>${l.item_id ? `<b>${l.qty} ×</b> ${esc(it?.name || l.name)}` : `<b>${l.qty} ×</b> <span class="bad-text">${esc(l.name)}</span>
+      <select class="ord-match" data-order="${esc(o.id)}" data-index="${i}">${itemOpts}</select>`}
+      ${l.notes ? `<div class="hint">${esc(l.notes)}</div>` : ""}${it && it.allergens.length ? `<div class="allergens">${it.allergens.map(esc).join(", ")}</div>` : ""}</li>`;
+  }).join("");
+  const next = { new: ["preparing", "Start making"], preparing: ["ready", "Ready"], ready: ["completed", "Picked up"] }[o.status];
+  return `<article class="ord-card ${minutesUntil(o.due_at) < 0 && o.status !== "ready" ? "late" : ""}" data-id="${esc(o.id)}" style="--c:${esc(chById(o.channel)?.color || "#777")}">
+    <div class="ord-top">${chBadge(o.channel)}<b>${esc(o.external_id || o.id)}</b><span class="spacer"></span>${dueText(o)}</div>
+    <div class="hint">${esc(o.customer || "—")} · placed ${esc(o.placed_at.slice(11, 16))}${o.source === "webhook" ? " · via connection" : ""}</div>
+    ${o.cancel_requested ? `<div class="cancel-req">${esc(chById(o.channel)?.name || "The app")} cancelled this order. Were the drinks made?
+      <div class="row-gap"><button class="small primary" data-cx-made="1">Yes: log as waste</button><button class="small ghost" data-cx-made="0">No: put stock back</button></div></div>` : ""}
+    <ul class="ord-lines">${lines}</ul>
+    ${o.notes ? `<div class="ord-notes ${/allerg/i.test(o.notes) ? "allergy" : ""}">${esc(o.notes)}</div>` : ""}
+    <div class="ord-actions"><button class="primary small" data-next="${next[0]}" ${unmatched ? "disabled title='Match every item first'" : ""}>${next[1]}</button>
+      ${o.status === "ready" ? '<button class="ghost small" data-next="preparing">Back to preparing</button>' : ""}
+      <span class="spacer"></span><button class="ghost small danger" data-cancel-order>Cancel</button></div></article>`;
+}
+
+$("#ord-board").addEventListener("click", async (e) => {
+  const card = e.target.closest(".ord-card");
+  if (!card) return;
+  const o = S.orders.find((x) => x.id === card.dataset.id);
+  try {
+    if (e.target.dataset.next) await api("POST", `/api/orders/${o.id}/status`, { status: e.target.dataset.next });
+    else if (e.target.dataset.cxMade !== undefined) {
+      await api("POST", `/api/orders/${o.id}/cancel`, { made: e.target.dataset.cxMade === "1", reason: `Cancelled on ${chById(o.channel)?.name}` });
+      toast("Order cancelled");
+    } else if (e.target.matches("[data-cancel-order]")) openCancel(o);
+  } catch (err) { toast(err.message, true); }
+});
+$("#ord-board").addEventListener("change", async (e) => {
+  if (!e.target.matches(".ord-match") || !e.target.value) return;
+  try {
+    await api("POST", `/api/orders/${e.target.dataset.order}/match`, { index: +e.target.dataset.index, item_id: e.target.value });
+    toast("Matched — the app will remember it next time");
+  } catch (err) { toast(err.message, true); }
+});
+$("#ord-filter").addEventListener("change", renderOrders);
+
+function openCancel(o) {
+  cancelling = o;
+  $("#cx-title").textContent = `Cancel ${chById(o.channel)?.name || ""} order ${o.external_id || o.id}`;
+  $("#cx-reason").value = "";
+  const started = o.status !== "new";
+  $("#cx-text").textContent = started ? "These drinks have been started. Were they made?" : "Nothing has been made yet, so no stock changes.";
+  $("#cx-buttons").innerHTML = started
+    ? `<button type="button" class="ghost" data-close>Keep the order</button><span class="spacer"></span>
+       <button type="button" class="ghost" data-cx="0">Not made: put stock back</button><button type="button" class="primary" data-cx="1">Made: log as waste</button>`
+    : `<button type="button" class="ghost" data-close>Keep the order</button><span class="spacer"></span><button type="button" class="primary danger-fill" data-cx="0">Cancel order</button>`;
+  $$("#cx-buttons [data-close]").forEach((b) => b.addEventListener("click", () => $("#cancel-dialog").close()));
+  $("#cancel-dialog").showModal();
+}
+$("#cx-buttons").addEventListener("click", async (e) => {
+  if (e.target.dataset.cx === undefined) return;
+  try {
+    await api("POST", `/api/orders/${cancelling.id}/cancel`, { made: e.target.dataset.cx === "1", reason: $("#cx-reason").value });
+    $("#cancel-dialog").close();
+    toast(e.target.dataset.cx === "1" ? "Cancelled — drinks logged as waste" : "Order cancelled");
+  } catch (err) { toast(err.message, true); }
+});
+
+// new order (typed in from an app's tablet, or a phone order)
+function openNewOrder() {
+  const chans = (S.channels || []).filter((c) => c.enabled);
+  newOrder = { channel: chans[0]?.id, lines: {} };
+  $("#no-channel").innerHTML = chans.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+  ["#no-ext", "#no-customer", "#no-notes"].forEach((s) => ($(s).value = ""));
+  const due = new Date(Date.now() + 15 * 60000);
+  $("#no-due").value = `${pad2(due.getHours())}:${pad2(due.getMinutes())}`;
+  renderNewOrder();
+  $("#order-dialog").showModal();
+}
+function linePrice(itemId) {
+  const it = itemById(itemId), c = chById(newOrder.channel);
+  return Math.round(it.price * (1 + (c?.markup_pct || 0) / 100) * 100) / 100;
+}
+function renderNewOrder() {
+  $("#no-picker").innerHTML = S.items.filter((i) => i.active).map((it) => `<button type="button" class="sell-btn ${it.can_make === 0 ? "out" : ""}" data-add="${esc(it.id)}">
+    ${thumb(it, "mini")}<span>${esc(it.name)}</span><b>${money(linePrice(it.id))}</b>${newOrder.lines[it.id] ? `<i class="badge">${newOrder.lines[it.id].qty}</i>` : ""}</button>`).join("");
+  const lines = Object.entries(newOrder.lines);
+  $("#no-lines").innerHTML = lines.length ? lines.map(([id, l]) => `<div class="recipe-line no-line" data-id="${esc(id)}"><span class="rl-name">${esc(itemById(id).name)}</span>
+    <button type="button" class="step" data-step="-1">−</button><input type="number" class="rl-qty" min="0" value="${l.qty}">
+    <button type="button" class="step" data-step="1">+</button><span class="rl-unit">at</span>
+    <input type="number" class="no-price" min="0" step="0.01" value="${l.price}"><span></span></div>`).join("") : '<p class="hint">Tap drinks on the right.</p>';
+  const total = lines.reduce((a, [, l]) => a + l.qty * l.price, 0);
+  const c = chById(newOrder.channel);
+  const keep = total * (1 - (c?.commission_pct || 0) / 100) - (lines.length ? c?.fee_per_order || 0 : 0);
+  $("#no-total").innerHTML = `Total <b>${money(total)}</b>` + (isMgr() && c?.commission_pct ? ` · you keep about <b>${money(keep)}</b> after ${num(c.commission_pct)}% commission` : "");
+}
+$("#ord-new").addEventListener("click", openNewOrder);
+$("#no-channel").addEventListener("change", () => {
+  newOrder.channel = $("#no-channel").value;
+  Object.keys(newOrder.lines).forEach((id) => (newOrder.lines[id].price = linePrice(id)));
+  renderNewOrder();
+});
+$("#no-picker").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-add]");
+  if (!b) return;
+  const l = newOrder.lines[b.dataset.add] ||= { qty: 0, price: linePrice(b.dataset.add) };
+  l.qty += 1;
+  renderNewOrder();
+});
+$("#no-lines").addEventListener("click", (e) => {
+  const row = e.target.closest(".no-line");
+  if (!row || !e.target.dataset.step) return;
+  const l = newOrder.lines[row.dataset.id];
+  l.qty = Math.max(0, l.qty + +e.target.dataset.step);
+  if (!l.qty) delete newOrder.lines[row.dataset.id];
+  renderNewOrder();
+});
+$("#no-lines").addEventListener("change", (e) => {
+  const row = e.target.closest(".no-line");
+  if (!row) return;
+  const l = newOrder.lines[row.dataset.id];
+  if (e.target.matches(".rl-qty")) l.qty = Math.max(0, parseInt(e.target.value) || 0);
+  if (e.target.matches(".no-price")) l.price = Math.max(0, parseFloat(e.target.value) || 0);
+  if (!l.qty) delete newOrder.lines[row.dataset.id];
+  renderNewOrder();
+});
+$("#order-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const items = Object.entries(newOrder.lines).map(([item_id, l]) => ({ item_id, qty: l.qty, price: l.price }));
+  if (!items.length) return toast("Add at least one drink", true);
+  const [h, m] = $("#no-due").value.split(":").map(Number);
+  const due = new Date(); due.setHours(h, m, 0, 0);
+  try {
+    await api("POST", "/api/orders", { channel: newOrder.channel, external_id: $("#no-ext").value, customer: $("#no-customer").value,
+      notes: $("#no-notes").value, due_at: `${isoOf(due)}T${pad2(h)}:${pad2(m)}`, items, start: $("#no-start").checked });
+    $("#order-dialog").close();
+    toast("Order added");
+  } catch (err) { toast(err.message, true); }
+});
+
+function channelTable(rows) {
+  if (!rows || !rows.length) return `<p class="hint">No sales in this period.</p>`;
+  const tot = rows.reduce((a, r) => ({ gross: a.gross + r.gross, cut: a.cut + r.commission + r.fees, net: a.net + r.net }), { gross: 0, cut: 0, net: 0 });
+  return `<table class="data compact"><tr><th>Channel</th><th class="r">Orders</th><th class="r">Drinks</th><th class="r">Customers paid</th><th class="r">Commission</th><th class="r">Fees</th><th class="r">You keep</th><th class="r">Keep %</th></tr>` +
+    rows.map((r) => `<tr><td>${r.channel ? chBadge(r.channel) : "<b>In store</b>"}</td><td class="r">${r.channel ? r.orders : "–"}</td><td class="r">${num(r.drinks)}</td>
+      <td class="r">${money(r.gross)}</td><td class="r">${r.commission ? money(r.commission) : "–"}</td><td class="r">${r.fees ? money(r.fees) : "–"}</td>
+      <td class="r"><b>${money(r.net)}</b></td><td class="r">${r.gross ? pct(r.net / r.gross) : "–"}</td></tr>`).join("") +
+    `<tr class="total-row"><td><b>Total</b></td><td></td><td></td><td class="r"><b>${money(tot.gross)}</b></td><td class="r" colspan="2">${money(tot.cut)} to the apps</td><td class="r"><b>${money(tot.net)}</b></td><td class="r">${tot.gross ? pct(tot.net / tot.gross) : "–"}</td></tr></table>`;
+}
+function renderChannelReport() {
+  $$("#ord-period button").forEach((b) => b.classList.toggle("on", b.dataset.p === ordPeriod));
+  $("#ord-channels").innerHTML = channelTable(S.channel_report?.[ordPeriod]);
+  $("#dash-channels").innerHTML = channelTable(S.channel_report?.week);
+}
+$("#ord-period").addEventListener("click", (e) => { if (e.target.dataset.p) { ordPeriod = e.target.dataset.p; renderChannelReport(); } });
+
+function renderProfitByChannel() {
+  const chans = (S.channels || []).filter((c) => c.enabled);
+  $("#ord-profit").innerHTML = `<tr><th>Drink</th><th class="r">Ingredients</th><th class="r">In store</th>${chans.map((c) => `<th class="r">${esc(c.name)}</th>`).join("")}</tr>` +
+    S.items.filter((i) => i.active).map((it) => {
+      const base = it.price - it.cost;
+      return `<tr><td>${esc(it.name)}</td><td class="r">${money(it.cost)}</td><td class="r">${money(base)}</td>` + chans.map((c) => {
+        const price = Math.round(it.price * (1 + c.markup_pct / 100) * 100) / 100;
+        const keep = price - it.cost - price * c.commission_pct / 100;
+        return `<td class="r ${keep < base / 2 ? "bad-text" : ""}" title="Sells for ${money(price)}">${money(keep)}</td>`;
+      }).join("") + `</tr>`;
+    }).join("");
+}
+
+// settings: delivery app terms and connections
+function renderChannelSettings() {
+  const owner = me()?.role === "owner";
+  $("#ch-table").innerHTML = `<tr><th>Channel</th><th>On</th><th>Commission %</th><th>Fee per order ($)</th><th>Mark-up %</th><th></th></tr>` +
+    (S.channels || []).map((c) => `<tr data-ch="${esc(c.id)}"><td>${chBadge(c.id)}</td>
+      <td><input type="checkbox" class="ch-on" ${c.enabled ? "checked" : ""} ${owner ? "" : "disabled"}></td>
+      <td><input type="number" class="ch-pct" min="0" max="100" step="0.5" value="${c.commission_pct}" ${owner ? "" : "disabled"}></td>
+      <td><input type="number" class="ch-fee" min="0" step="0.01" value="${c.fee_per_order}" ${owner ? "" : "disabled"}></td>
+      <td><input type="number" class="ch-mk" min="0" max="100" step="0.5" value="${c.markup_pct}" ${owner ? "" : "disabled"}></td>
+      <td>${owner ? '<button class="ghost small ch-save">Save</button>' : ""}</td></tr>`).join("");
+  if (owner) {
+    $("#ch-hooks").innerHTML = `<table class="data compact"><tr><th>Channel</th><th>Address to post orders to</th><th>Secret</th><th></th></tr>` +
+      S.channels.map((c) => `<tr data-ch="${esc(c.id)}"><td>${chBadge(c.id)}</td><td><code>${esc(location.origin)}/api/integrations/${esc(c.id)}/orders</code></td>
+        <td><code class="secret" data-secret="${esc(c.token)}">••••••••</code> <button class="ghost small ch-show">Show</button></td>
+        <td><button class="ghost small ch-token">New secret</button></td></tr>`).join("") + `</table>`;
+    $("#ch-example").textContent = `POST ${location.origin}/api/integrations/doordash/orders
+Authorization: Bearer <the channel's secret>
+  (or X-Signature: sha256=<HMAC-SHA256 of the body, keyed with the secret>)
+Content-Type: application/json
+
+{
+  "external_id": "4F2A9",               // the app's order number (sending it twice is safe)
+  "customer": "Ana R.",
+  "placed_at": "2026-11-07T12:31",      // optional; defaults to now
+  "due_at": "2026-11-07T12:45",         // optional; defaults to 15 minutes later
+  "notes": "Allergy: tree nuts",
+  "items": [
+    {"name": "Peach Paradise", "qty": 2, "price": 10.29, "notes": "no ice"}
+  ]
+}
+
+Cancel: {"external_id": "4F2A9", "status": "cancelled"}
+Item names are matched to the menu; unknown names show on the board to be matched once.`;
+  }
+  const log = S.integration_log || [];
+  $("#ch-log").innerHTML = log.length ? `<table class="data compact"><tr><th>When</th><th>Channel</th><th>Result</th></tr>` +
+    log.slice(0, 10).map((l) => `<tr><td>${esc(l.at.replace("T", " "))}</td><td>${chBadge(l.channel)}</td><td class="${/^ok/.test(l.result) ? "" : "bad-text"}">${esc(l.result)}</td></tr>`).join("") + `</table>`
+    : `<p class="hint">Nothing received yet.</p>`;
+}
+$("#ch-table").addEventListener("click", async (e) => {
+  if (!e.target.matches(".ch-save")) return;
+  const row = e.target.closest("tr");
+  try {
+    await api("PUT", `/api/channels/${row.dataset.ch}`, { enabled: $(".ch-on", row).checked, commission_pct: $(".ch-pct", row).value,
+      fee_per_order: $(".ch-fee", row).value, markup_pct: $(".ch-mk", row).value });
+    toast("Saved");
+  } catch (err) { toast(err.message, true); }
+});
+$("#ch-hooks").addEventListener("click", async (e) => {
+  const row = e.target.closest("tr[data-ch]");
+  if (!row) return;
+  if (e.target.matches(".ch-show")) {
+    const code = $(".secret", row);
+    const shown = code.textContent !== "••••••••";
+    code.textContent = shown ? "••••••••" : code.dataset.secret;
+    e.target.textContent = shown ? "Show" : "Hide";
+  }
+  if (e.target.matches(".ch-token") && confirm("Make a new secret? Anything using the old one stops working until it's updated.")) {
+    try { await api("POST", `/api/channels/${row.dataset.ch}/token`); toast("New secret made"); } catch (err) { toast(err.message, true); }
+  }
+});
+
+// new-order alert: refresh while the board or dashboard is open, beep for orders not seen before
+let audioCtx = null;
+$("#ord-sound").addEventListener("change", (e) => {
+  try { localStorage.setItem("ordSound", e.target.checked ? "1" : "0"); } catch (_) { /* private mode */ }
+  if (e.target.checked) { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); beep(); }
+});
+try { $("#ord-sound").checked = localStorage.getItem("ordSound") === "1"; } catch (_) { /* private mode */ }
+function beep() {
+  if (!audioCtx) return;
+  [0, 0.25].forEach((t) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = 880; g.gain.value = 0.15;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(audioCtx.currentTime + t); o.stop(audioCtx.currentTime + t + 0.15);
+  });
+}
+function noticeNewOrders() {
+  const ids = (S.orders || []).filter((o) => o.status === "new").map((o) => o.id);
+  if (knownNew) {
+    const fresh = ids.filter((id) => !knownNew.has(id));
+    if (fresh.length) {
+      const o = S.orders.find((x) => x.id === fresh[0]);
+      toast(`New ${chById(o.channel)?.name || ""} order${fresh.length > 1 ? `s (${fresh.length})` : ""}`);
+      if ($("#ord-sound").checked) { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); beep(); }
+    }
+  }
+  knownNew = new Set(ids);
+}
+setInterval(async () => {
+  const tab = $("#tabs .active")?.dataset.tab;
+  if (document.hidden || !["orders", "dashboard"].includes(tab) || $$("dialog[open]").length) return;
+  try { const s = await api("GET", "/api/state"); S = s; render(); } catch (_) { /* try again next time */ }
+}, 15000);
+setInterval(() => { if ($("#tabs .active")?.dataset.tab === "orders" && !$$("dialog[open]").length) renderOrders(); }, 30000);
 
 // ---------------------------------------------------------------- settings
 function renderSettings() {

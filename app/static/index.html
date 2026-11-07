@@ -14,6 +14,7 @@
       <button data-tab="menu">Menu</button>
       <button data-tab="ingredients" class="mgr-only">Ingredients</button>
       <button data-tab="sell">Record Sales</button>
+      <button data-tab="orders">Orders <span class="tab-badge" id="ord-badge" hidden></span></button>
       <button data-tab="procurement" class="mgr-only">Procurement</button>
       <button data-tab="receiving">Receiving</button>
       <button data-tab="stock">Counts &amp; Waste</button>
@@ -38,6 +39,11 @@
           <h2>Menu availability</h2>
           <p class="hint">How many of each item current stock can make. The limiting ingredient is shown.</p>
           <div id="dash-availability"></div>
+        </div>
+        <div class="card span-all">
+          <h2>Sales by channel this week</h2>
+          <p class="hint">In-store sales and each delivery app: what customers paid, what the app keeps in commission and fees, and what you keep.</p>
+          <div id="dash-channels"></div>
         </div>
         <div class="card span-all">
           <h2>Cost changes (last 30 days)</h2>
@@ -100,6 +106,37 @@
       <div class="card">
         <h2>Recent sales</h2>
         <div id="sales-log"></div>
+      </div>
+    </section>
+
+    <!-- Orders (delivery & pickup apps) -->
+    <section id="tab-orders" class="tab">
+      <div class="toolbar">
+        <h2>Orders</h2>
+        <span class="hint" id="ord-summary"></span>
+        <span class="spacer"></span>
+        <label class="check"><input type="checkbox" id="ord-sound"> Sound for new orders</label>
+        <button class="primary" id="ord-new">+ New order</button>
+      </div>
+      <div id="ord-pause"></div>
+      <div class="ord-board" id="ord-board"></div>
+      <div class="card">
+        <div class="toolbar tight"><h2>Recent orders</h2><span class="spacer"></span>
+          <select id="ord-filter"><option value="">All channels</option></select></div>
+        <div class="table-wrap"><table class="data compact" id="ord-recent"></table></div>
+      </div>
+      <div class="grid2 mgr-only">
+        <div class="card span-all">
+          <div class="toolbar tight"><h2>Sales by channel</h2><span class="spacer"></span>
+            <div class="seg" id="ord-period"><button type="button" data-p="today">Today</button><button type="button" data-p="week" class="on">This week</button></div></div>
+          <div id="ord-channels"></div>
+        </div>
+        <div class="card span-all">
+          <h2>Profit per drink by channel</h2>
+          <p class="hint">What you keep from one drink on each app after ingredients and commission (per-order fees not included).
+            Red means you keep less than half of what you keep in store.</p>
+          <div class="table-wrap"><table class="data compact" id="ord-profit"></table></div>
+        </div>
       </div>
     </section>
 
@@ -239,6 +276,24 @@
             <label>Employee <select name="employee_id" id="user-emp"></select></label>
             <button class="primary">Add user</button>
           </form>
+        </div>
+        <div class="card mgr-only span-all">
+          <h2>Delivery apps</h2>
+          <p class="hint">Rates from your agreement with each app. <b>Commission</b> is the share of each order the app keeps; <b>fee</b> is any
+            fixed charge per order; <b>mark-up</b> is how much more a drink costs on the app than in store (used as the starting price for new orders).
+            Only the owner can change these.</p>
+          <div class="table-wrap"><table class="data compact" id="ch-table"></table></div>
+          <div class="owner-only">
+            <h3>Connect an order hub (live orders)</h3>
+            <p class="hint">DoorDash and Uber Eats send orders straight to software only for approved integration partners. Most shops connect
+              them through an order hub (such as Deliverect, Otter or Chowly) or an automation tool, which can post each order here as it
+              arrives. Give it the channel's address and secret below; orders then appear on the Orders board with a sound.</p>
+            <div id="ch-hooks"></div>
+            <details><summary>What to send (for whoever sets up the connection)</summary>
+<pre class="code" id="ch-example"></pre></details>
+          </div>
+          <h3>Recent connection activity</h3>
+          <div id="ch-log"></div>
         </div>
         <div class="card owner-only span-all">
           <h2>Backups</h2>
@@ -432,6 +487,47 @@
         <button type="button" class="ghost" data-close>Cancel</button>
         <button type="submit" class="primary">Save employee</button>
       </div>
+    </form>
+  </dialog>
+
+  <!-- New order -->
+  <dialog id="order-dialog" class="big">
+    <form method="dialog" id="order-form">
+      <div class="dialog-head"><h2>New order</h2><button type="button" class="ghost" data-close>&#10005;</button></div>
+      <div class="three">
+        <label>From <select id="no-channel"></select></label>
+        <label>Order number on the app <input id="no-ext" placeholder="e.g. 4F2A9"></label>
+        <label>Customer <input id="no-customer" placeholder="First name + initial"></label>
+        <label>Ready by <input type="time" id="no-due"></label>
+        <label class="span2">Notes (allergies, requests) <input id="no-notes"></label>
+      </div>
+      <div class="builder">
+        <div>
+          <h3>Items</h3>
+          <div id="no-lines" class="recipe-lines"></div>
+          <div class="calc" id="no-total"></div>
+        </div>
+        <div>
+          <h3>Tap to add</h3>
+          <div id="no-picker" class="sell-buttons small-buttons"></div>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <label class="check"><input type="checkbox" id="no-start" checked> Start making now</label>
+        <span class="spacer"></span>
+        <button type="button" class="ghost" data-close>Cancel</button>
+        <button type="submit" class="primary">Add order</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Cancel an order -->
+  <dialog id="cancel-dialog" class="small">
+    <form method="dialog" id="cancel-form">
+      <div class="dialog-head"><h2 id="cx-title">Cancel order</h2><button type="button" class="ghost" data-close>&#10005;</button></div>
+      <p id="cx-text"></p>
+      <label>Reason <input id="cx-reason" placeholder="e.g. customer cancelled on the app"></label>
+      <div class="dialog-foot" id="cx-buttons"></div>
     </form>
   </dialog>
 
