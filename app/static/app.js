@@ -60,6 +60,7 @@ function thumb(item, cls = "thumb") {
 // ------------------------------------------------------------------ tabs
 $$("#tabs button").forEach((b) => b.addEventListener("click", () => {
   $$("#tabs button").forEach((x) => x.classList.toggle("active", x === b));
+  b.scrollIntoView({ block: "nearest", inline: "center" });  // keep the chosen tab in view on phones
   $$(".tab").forEach((t) => t.classList.toggle("active", t.id === "tab-" + b.dataset.tab));
   location.hash = b.dataset.tab;
 }));
