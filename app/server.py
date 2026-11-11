@@ -18,9 +18,9 @@ import tempfile
 from datetime import date, datetime, timedelta
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
-from . import backup, orders, pos_import
+from . import backup, orders, pos_import, weather
 from .auth import RANK, ROLES, SESSION_HOURS, Users
 from .excel import EXPORT_PATH, export_listener, export_workbook, import_workbook
 from .store import IMAGE_DIR, ROOT, Store, ValidationError
@@ -49,6 +49,8 @@ STAFF_ROUTES = [
 OWNER_ROUTES = [
     ("PUT", r"/api/settings"),
     ("PUT", r"/api/channels/[\w-]+"),
+    ("PUT", r"/api/weather/settings"),
+    ("GET", r"/api/weather/places"),
     ("POST", r"/api/channels/[\w-]+/token"),
     ("GET", r"/api/backup\.zip"),
     ("GET", r"/api/backups/[\w.-]+"),
@@ -62,7 +64,7 @@ def required_role(method, path):
     for m, pattern in STAFF_ROUTES:
         if m == method and re.fullmatch(pattern, path):
             return "staff"
-    if method == "GET" and (path in ("/", "/index.html", "/api/state") or path.startswith(("/images/", "/static/"))):
+    if method == "GET" and (path in ("/", "/index.html", "/api/state", "/api/traffic") or path.startswith(("/images/", "/static/"))):
         return "staff"
     return "manager"
 
@@ -89,6 +91,7 @@ def snapshot_for(user):
     monday = date.today() - timedelta(days=date.today().weekday())
     snap["channel_report"] = {"today": orders.channel_report(store, date.today().isoformat()),
                               "week": orders.channel_report(store, monday.isoformat())}
+    snap["traffic"] = weather.analysis(store)
     if RANK[user["role"]] >= RANK["manager"]:
         snap["integration_log"] = store.data.get("integration_log", [])[-30:][::-1]
     return snap
@@ -211,6 +214,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, body,
                               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                               {"Content-Disposition": 'attachment; filename="inventory.xlsx"'})
+        if path == "/api/traffic":
+            try:
+                days = min(max(int(parse_qs(urlparse(self.path).query).get("days", ["28"])[0]), 7), 180)
+            except ValueError:
+                days = 28
+            return self._send(200, weather.analysis(store, days))
+        if path == "/api/weather/places":
+            q = parse_qs(urlparse(self.path).query).get("q", [""])[0]
+            try:
+                return self._send(200, {"places": weather.find_places(q)})
+            except ValidationError as e:
+                return self._send(400, {"error": str(e)})
         if path == "/api/backup.zip":
             from .auth import USERS_FILE
             name = f"menu-inventory-backup-{date.today().isoformat()}.zip"
@@ -398,6 +413,24 @@ class Handler(BaseHTTPRequestHandler):
             if m:
                 ch = orders.new_token(store, m.group(1)) if m.group(2) else orders.update_channel(store, m.group(1), body)
                 return self._ok({"saved": {k: v for k, v in ch.items() if k != "token"}})
+            if path == "/api/weather/settings" and method == "PUT":
+                before = (store.data["settings"].get("location") or {}).get("lat"), (store.data["settings"].get("location") or {}).get("lon")
+                st = weather.update_settings(store, body)
+                moved = st["location"] and (st["location"]["lat"], st["location"]["lon"]) != before
+                if moved:  # fetch the new place's weather now; the setting is kept even if that fails
+                    try:
+                        weather.refresh(store)
+                        first_sale = min((x["date"][:10] for x in store.data["sales"]), default=None)
+                        if first_sale:
+                            weather.backfill(store, first_sale)
+                    except ValidationError as e:
+                        return self._ok({"weather_error": str(e)})
+                return self._ok()
+            if path == "/api/weather/refresh" and method == "POST":
+                n = weather.refresh(store)
+                if body.get("backfill_from"):
+                    n += weather.backfill(store, str(body["backfill_from"])[:10])
+                return self._ok({"hours": n})
             if path == "/api/settings" and method == "PUT":
                 store.update_settings(body)
                 return self._ok()
@@ -438,6 +471,23 @@ class Handler(BaseHTTPRequestHandler):
             self._send(500, {"error": f"{type(e).__name__}: {e}"})
 
 
+def start_weather_refresh():
+    """Keep the weather current (hourly) once the shop has set its location."""
+    import threading
+    import time
+
+    def loop():
+        while True:
+            if store.data["settings"].get("location"):
+                try:
+                    weather.refresh(store)
+                    store.save()
+                except ValidationError as e:
+                    print("Weather update failed:", e)
+            time.sleep(weather.REFRESH_MINUTES * 60)
+    threading.Thread(target=loop, daemon=True, name="weather").start()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"),
@@ -457,6 +507,8 @@ def main():
     if not store.data["channels"]:  # delivery-app channels, for catalogs made before they existed
         orders.ensure_channels(store)
         store.save()
+    weather.settings(store)
+    start_weather_refresh()
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     shown = "localhost" if args.host in ("0.0.0.0", "127.0.0.1") else args.host
     print(f"Menu & inventory manager running at http://{shown}:{args.port}")

@@ -3,7 +3,7 @@
 import random
 from datetime import datetime, timedelta
 
-from . import orders
+from . import orders, weather
 from .excel import export_workbook
 from .store import Store, empty_catalog
 
@@ -150,20 +150,42 @@ def build(store: Store, with_sales=True):
     # One gap the manager still needs to fill.
     store.upsert_shift({"employee_id": None, "date": (this_monday + timedelta(days=5)).isoformat(),
                         "start": "13:00", "end": "20:00", "role": "Juicer", "notes": "Saturday close"})
+    weather.sample_weather(store)
     if with_sales:
-        # Two weeks of sales history, without consuming the seeded stock levels.
-        rng = random.Random(42)
-        start_stock = {i["id"]: i["on_hand"] for i in store.data["ingredients"]}
-        now = datetime.now().replace(minute=0, second=0, microsecond=0)
-        for day in range(14, 0, -1):
-            for item in store.data["items"]:
-                qty = rng.randint(12, 30)  # ~250 drinks a day across the menu
-                when = (now - timedelta(days=day)).replace(hour=rng.randint(8, 18))
-                store.record_sales([{"item_id": item["id"], "qty": qty}], when.isoformat())
-        store.data["sales"].sort(key=lambda s: s["date"])
-        for ing in store.data["ingredients"]:
-            ing["on_hand"] = start_stock[ing["id"]]
+        _hourly_sales(store)
     _purchase_orders(store, ids)
+
+
+# Share of a day's drinks sold in each opening hour (7am-8pm): breakfast, a lunch peak, an afternoon smoothie run.
+HOUR_SHAPE = {7: 3, 8: 6, 9: 7, 10: 7, 11: 9, 12: 12, 13: 12, 14: 10, 15: 10, 16: 9, 17: 7, 18: 5, 19: 3}
+ITEM_WEIGHTS = [10, 7, 6, 8, 10, 10, 9, 8, 7, 6, 9, 7]
+
+
+def _hourly_sales(store, days=14):
+    """Two weeks of in-store sales hour by hour, busier when it's warm and quieter in the rain,
+    without consuming the seeded stock levels."""
+    rng = random.Random(42)
+    start_stock = {i["id"]: i["on_hand"] for i in store.data["ingredients"]}
+    items = [i["id"] for i in store.data["items"]]
+    shape_total = sum(HOUR_SHAPE.values())
+    today = datetime.now().date()
+    lines = []
+    for back in range(days, 0, -1):
+        day = today - timedelta(days=back)
+        weekend = 1.15 if day.weekday() >= 5 else 1.0
+        for hour, share in HOUR_SHAPE.items():
+            wx = store.data["weather"]["hours"].get(f"{day.isoformat()}T{hour:02d}", {"t": 22, "p": 0})
+            mean = 250 * share / shape_total * weekend * (1 + 0.04 * (wx["t"] - 22)) * (0.8 if wx["p"] >= 0.2 else 1)
+            n = max(int(round(rng.gauss(mean, mean ** 0.5))), 0)
+            picks = {}
+            for item_id in rng.choices(items, weights=ITEM_WEIGHTS[:len(items)], k=n):
+                picks[item_id] = picks.get(item_id, 0) + 1
+            for item_id, qty in picks.items():
+                lines.append({"item_id": item_id, "qty": qty, "date": f"{day.isoformat()}T{hour:02d}:{rng.randint(0, 59):02d}:00"})
+    store.record_sales(lines)
+    store.data["sales"].sort(key=lambda s: s["date"])
+    for ing in store.data["ingredients"]:
+        ing["on_hand"] = start_stock[ing["id"]]
 
 
 def _purchase_orders(store, ids):

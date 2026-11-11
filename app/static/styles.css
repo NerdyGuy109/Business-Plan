@@ -152,6 +152,32 @@ legend { font-weight: 700; padding: 0 6px; }
 details { margin-top: 8px; font-size: 13px; }
 .pq { width: 70px; }
 
+/* weather & traffic charts */
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .baseline { stroke: var(--muted); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-size: 11.5px; }
+.chart .axis.sub { font-size: 11px; }
+.chart .group { fill: var(--text); font-size: 12.5px; font-weight: 700; }
+.chart .divider { stroke: var(--muted); stroke-dasharray: 3 3; }
+.chart .bar { fill: var(--brand); }
+.chart .ref { stroke: var(--text); stroke-width: 2; opacity: .55; }
+.chart .dot { fill: var(--brand); fill-opacity: .35; stroke: var(--card); stroke-width: 1; }
+.chart .dot.rain { fill-opacity: .15; stroke: var(--text); stroke-width: 1.5; }
+.chart .trend { fill: none; stroke: var(--text); stroke-width: 2; }
+.chart .trend-pt { fill: var(--text); stroke: var(--card); stroke-width: 2; }
+.chart [data-tip] { cursor: default; }
+.chart circle[data-tip]:hover { fill-opacity: .9; }
+.chart-tip { position: fixed; z-index: 60; display: none; pointer-events: none; background: var(--card); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 12.5px; line-height: 1.4; box-shadow: 0 6px 18px rgba(0,0,0,.15); }
+.legend { display: flex; gap: 16px; font-size: 12.5px; color: var(--muted); margin-top: 6px; flex-wrap: wrap; }
+.legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.lg-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); opacity: .5; }
+.lg-line { width: 18px; height: 2px; background: var(--text); }
+.lg-ring { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--text); }
+#wx-places { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 10px; }
+#wx-places label.check { color: var(--text); font-weight: 500; }
+
 /* orders */
 .imp-source { max-width: 420px; margin-top: 8px; }
 .tab-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; border-radius: 9px; background: var(--bad);

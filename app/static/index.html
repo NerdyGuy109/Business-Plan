@@ -15,6 +15,7 @@
       <button data-tab="ingredients" class="mgr-only">Ingredients</button>
       <button data-tab="sell">Record Sales</button>
       <button data-tab="orders">Orders <span class="tab-badge" id="ord-badge" hidden></span></button>
+      <button data-tab="traffic">Weather &amp; Traffic</button>
       <button data-tab="procurement" class="mgr-only">Procurement</button>
       <button data-tab="receiving">Receiving</button>
       <button data-tab="stock">Counts &amp; Waste</button>
@@ -140,6 +141,43 @@
       </div>
     </section>
 
+    <!-- Weather & traffic -->
+    <section id="tab-traffic" class="tab">
+      <div class="toolbar">
+        <h2>Weather &amp; traffic</h2>
+        <span class="hint" id="tr-source"></span>
+        <span class="spacer"></span>
+        <div class="seg" id="tr-days"><button type="button" data-d="14">2 weeks</button><button type="button" data-d="28" class="on">4 weeks</button><button type="button" data-d="56">8 weeks</button></div>
+        <button class="ghost mgr-only" id="tr-refresh">Update weather</button>
+      </div>
+      <div id="tr-empty"></div>
+      <div class="kpis" id="tr-kpis"></div>
+      <div class="card">
+        <h2 id="tr-fc-title">Expected drinks by hour</h2>
+        <p class="hint">Each hour's usual drinks, adjusted for the forecast temperature (and rain). Use it for prep and staffing.
+          The thin line on each bar is that hour's usual level.</p>
+        <div id="tr-forecast" class="chart"></div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h2>Drinks per hour vs temperature</h2>
+          <p class="hint">Each dot is one opening hour. The line joins the average for each temperature band.</p>
+          <div id="tr-scatter" class="chart"></div>
+          <div class="legend"><span><i class="lg-dot"></i>One hour</span><span><i class="lg-line"></i>Band average</span><span><i class="lg-ring"></i>Rainy hour</span></div>
+        </div>
+        <div class="card">
+          <h2>Average drinks by hour of day</h2>
+          <p class="hint">The shop's daily rhythm over the period, with the usual temperature at that hour.</p>
+          <div id="tr-hours" class="chart"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>By temperature band</h2>
+        <div class="table-wrap"><table class="data compact" id="tr-bands"></table></div>
+        <p class="hint" id="tr-method"></p>
+      </div>
+    </section>
+
     <!-- Procurement -->
     <section id="tab-procurement" class="tab">
       <p class="hint">Suggested orders refill each ingredient to its par level once it reaches its reorder point. Adjust quantities, then create a purchase order per supplier. Mark it received when it arrives to add the stock.</p>
@@ -250,6 +288,19 @@
             <p class="hint">Drinks whose ingredient cost is above this share of the price are flagged in red.</p>
             <button class="primary">Save settings</button>
           </form>
+        </div>
+        <div class="card owner-only">
+          <h2>Weather</h2>
+          <p class="hint">Where the shop is, so the app can fetch hourly weather (free, from Open-Meteo) and compare it with sales.</p>
+          <div id="wx-current" class="calc"></div>
+          <div class="toolbar tight"><input id="wx-search" type="search" placeholder="Town or city…"><button class="ghost" id="wx-find">Find</button></div>
+          <div id="wx-places"></div>
+          <div class="three">
+            <label>Temperature in <select id="wx-unit"><option value="F">°F</option><option value="C">°C</option></select></label>
+            <label>Opens at <select id="wx-open"></select></label>
+            <label>Last hour of business <select id="wx-close"></select></label>
+          </div>
+          <button class="primary" id="wx-save">Save weather settings</button>
         </div>
         <div class="card">
           <h2>My account</h2>

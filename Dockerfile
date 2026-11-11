@@ -13,7 +13,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /srv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+ && apt-get update && apt-get install -y --no-install-recommends tzdata && rm -rf /var/lib/apt/lists/*
+# Sales and the weather are matched by local time: set TZ to the shop's time zone (e.g. America/Chicago).
+ENV TZ=UTC
 COPY app ./app
 
 RUN useradd --create-home --uid 1000 menu && mkdir -p /data && chown menu:menu /data

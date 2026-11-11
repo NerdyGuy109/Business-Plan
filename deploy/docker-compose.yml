@@ -9,6 +9,7 @@ services:
     environment:
       MENU_SECURE_COOKIES: "1"   # cookies only over HTTPS
       MENU_TRUST_PROXY: "1"      # use the client address Caddy passes on (for login rate limits)
+      TZ: "America/New_York"     # the shop's time zone: sale times and hourly weather are matched by it
     volumes:
       - menu-data:/data
   caddy:

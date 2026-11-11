@@ -174,6 +174,10 @@ def export_workbook(store: Store, path=EXPORT_PATH):
         ("Stock Counts", "Physical counts against what the system expected. Negative variance = stock that left without "
                          "a sale or waste entry."),
         ("Waste Log", "Everything logged as thrown away, spilled, remade or given away, with its cost."),
+        ("Delivery Orders", "Orders from DoorDash, Uber Eats, Grubhub and phone: what customers paid, the app's commission and fee, "
+                            "and what you keep. Sales Log shows which channel each sale came from."),
+        ("Hourly Traffic", "Drinks sold in each opening hour beside that hour's temperature and rain, with the correlation "
+                           "and drinks per hour in each temperature band."),
         ("Sales Log", "Sales recorded on the website; feeds 'Units Used' and 'Units Sold'."),
         ("Staff", "Employees with role, hourly rate and maximum hours per week."),
         ("Schedule", "Every shift: date, employee, start/end, hours and labor cost. OPEN = not yet assigned."),
@@ -508,6 +512,47 @@ def export_workbook(store: Store, path=EXPORT_PATH):
     ws.cell(row=n, column=8, value="Total").font = Font(name=FONT, bold=True)
     c = ws.cell(row=n, column=9, value=f"=SUM(I2:I{n - 2})")
     c.font, c.number_format = Font(name=FONT, bold=True), MONEY
+    ws.freeze_panes = "A2"
+
+    # --- Hourly Traffic ----------------------------------------------------------
+    from . import weather
+    ws = wb.create_sheet("Hourly Traffic")
+    unit = weather.settings(store)["temp_unit"]
+    rows = [r for r in weather.hourly_traffic(store, days=56) if r["temp_c"] is not None]
+    for c, (header, width) in enumerate([("Date", 12), ("Hour", 7), ("Drinks", 9), (f"Temp (°{unit})", 10), ("Rain?", 7)], start=1):
+        cell = ws.cell(row=1, column=c, value=header)
+        cell.font, cell.fill = HEADER, HEADER_FILL
+        ws.column_dimensions[get_column_letter(c)].width = width
+    for r, row in enumerate(rows, start=2):
+        vals = [row["date"], f"{row['hour']:02d}:00", row["drinks"], round(weather.to_unit(row["temp_c"], unit), 1),
+                "Yes" if row["rain"] else ""]
+        for c, v in enumerate(vals, start=1):
+            _style_cell(ws.cell(row=r, column=c, value=v), "in", "0.0" if c == 4 else None)
+    last = max(len(rows) + 1, 2)
+    ws.column_dimensions["G"].width = 40
+    ws.column_dimensions["H"].width = 12
+    summary = [("Opening hours with weather", f"=COUNT(C2:C{last})", "0"),
+               ("Average drinks per hour", f"=IFERROR(AVERAGE(C2:C{last}),0)", "0.0"),
+               ("Correlation, drinks vs temperature (r)", f"=IFERROR(CORREL(C2:C{last},D2:D{last}),0)", "0.00"),
+               (f"Extra drinks/hour per 10°{unit} (all hours)", f"=IFERROR(SLOPE(C2:C{last},D2:D{last})*10,0)", "0.0"),
+               ("Average drinks, rainy hours", f'=IFERROR(AVERAGEIFS(C2:C{last},E2:E{last},"Yes"),"")', "0.0"),
+               ("Average drinks, dry hours", f'=IFERROR(AVERAGEIFS(C2:C{last},E2:E{last},"<>Yes"),"")', "0.0")]
+    ws["G1"] = "Summary (last 8 weeks)"
+    ws["G1"].font = Font(name=FONT, bold=True)
+    for i, (label, f, fmt) in enumerate(summary, start=2):
+        ws.cell(row=i, column=7, value=label).font = Font(name=FONT)
+        _style_cell(ws.cell(row=i, column=8, value=f), "f", fmt)
+    width = 10 if unit == "F" else 5
+    temps = [weather.to_unit(r["temp_c"], unit) for r in rows]
+    if temps:
+        ws.cell(row=10, column=7, value="Drinks per hour by temperature").font = Font(name=FONT, bold=True)
+        lo = int(min(temps) // width * width)
+        for i, b in enumerate(range(lo, int(max(temps)) + 1, width)):
+            ws.cell(row=11 + i, column=7, value=f"{b}–{b + width}°{unit}").font = Font(name=FONT)
+            _style_cell(ws.cell(row=11 + i, column=8,
+                                value=f'=IFERROR(AVERAGEIFS(C2:C{last},D2:D{last},">={b}",D2:D{last},"<{b + width}"),"")'), "f", "0.0")
+    ws.cell(row=20, column=7, value="The website's Weather & Traffic tab also takes out the time-of-day effect; "
+                                    "the all-hours figures here mix busy and quiet hours.").font = Font(name=FONT, italic=True, color="666666")
     ws.freeze_panes = "A2"
 
     # --- Sales Log -------------------------------------------------------------

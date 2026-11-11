@@ -79,6 +79,8 @@ function render() {
   renderAccount();
   renderOrders();
   renderChannelSettings();
+  renderTraffic();
+  renderWeatherSettings();
   noticeNewOrders();
   renderStock();
   renderImportHistory();
@@ -1624,6 +1626,189 @@ setInterval(async () => {
   try { const s = await api("GET", "/api/state"); S = s; render(); } catch (_) { /* try again next time */ }
 }, 15000);
 setInterval(() => { if ($("#tabs .active")?.dataset.tab === "orders" && !$$("dialog[open]").length) renderOrders(); }, 30000);
+
+// --------------------------------------------------------- weather & traffic
+let trDays = 28;
+let trData = null;            // analysis for a period other than the default 28 days
+const deg = (u) => `°${u}`;
+const hourLabel = (h) => `${h % 12 || 12}${h < 12 ? "a" : "p"}`;
+const svgEsc = esc;
+
+// one floating tooltip for every chart
+const tip = document.createElement("div");
+tip.className = "chart-tip";
+document.body.appendChild(tip);
+function wireTips(box) {
+  box.addEventListener("pointermove", (e) => {
+    const t = e.target.closest("[data-tip]");
+    if (!t) { tip.style.display = "none"; return; }
+    tip.innerHTML = t.dataset.tip;
+    tip.style.display = "block";
+    const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8);
+    tip.style.left = `${x}px`;
+    tip.style.top = `${e.clientY + 14}px`;
+  });
+  box.addEventListener("pointerleave", () => (tip.style.display = "none"));
+}
+["#tr-forecast", "#tr-scatter", "#tr-hours"].forEach((s) => wireTips($(s)));
+
+function niceMax(v) {
+  const step = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1))));
+  for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * step >= v) return m * step;
+  return 10 * step;
+}
+function ticks(lo, hi, n = 4) {
+  const raw = (hi - lo) / n, p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || raw;
+  const out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+
+// vertical bars over hour labels; optional reference tick per bar and a second label row
+function barChart(el, rows, { value, ref, label, sub, group, tipFor, height = 230 }) {
+  // width grows with the number of bars so text stays the same size; group(r) names runs of bars (e.g. days)
+  const W = Math.max(760, rows.length * 44 + 50), H = height + (group ? 22 : 0), L = 40, R = 10, T = group ? 30 : 12, B = sub ? 46 : 28;
+  const max = niceMax(Math.max(...rows.map((r) => Math.max(value(r), ref ? ref(r) : 0)), 1));
+  const pw = W - L - R, ph = H - T - B, bw = pw / rows.length, gap = Math.min(6, bw * 0.25);
+  const y = (v) => T + ph - (v / max) * ph;
+  const grid = ticks(0, max).map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="grid"/>
+    <text x="${L - 6}" y="${y(v) + 4}" class="axis" text-anchor="end">${v}</text>`).join("");
+  const bars = rows.map((r, i) => {
+    const x = L + i * bw + gap / 2, w = bw - gap, v = value(r), top = y(v), h = Math.max(T + ph - top, 0);
+    const rr = Math.min(4, w / 2, h);
+    const path = h > 0 ? `M${x},${T + ph} V${top + rr} Q${x},${top} ${x + rr},${top} H${x + w - rr} Q${x + w},${top} ${x + w},${top + rr} V${T + ph} Z` : "";
+    const refTick = ref ? `<line x1="${x + 2}" x2="${x + w - 2}" y1="${y(ref(r))}" y2="${y(ref(r))}" class="ref"/>` : "";
+    return `<g><path d="${path}" class="bar"/>${refTick}
+      <rect x="${L + i * bw}" y="${T}" width="${bw}" height="${ph}" fill="transparent" data-tip="${svgEsc(tipFor(r))}"/>
+      <text x="${x + w / 2}" y="${H - B + 16}" class="axis" text-anchor="middle">${label(r, i)}</text>
+      ${sub ? `<text x="${x + w / 2}" y="${H - B + 32}" class="axis sub" text-anchor="middle">${sub(r)}</text>` : ""}</g>`;
+  }).join("");
+  const groups = group ? rows.map((r, i) => (i === 0 || group(r) !== group(rows[i - 1]) ? `${i > 0 ? `<line x1="${L + i * bw}" x2="${L + i * bw}" y1="${T - 18}" y2="${T + ph}" class="divider"/>` : ""}
+    <text x="${L + i * bw + 4}" y="${T - 8}" class="group">${group(r)}</text>` : "")).join("") : "";
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img">${grid}${groups}<line x1="${L}" x2="${W - R}" y1="${T + ph}" y2="${T + ph}" class="baseline"/>${bars}</svg>`;
+}
+
+function scatterChart(el, a) {
+  const W = 760, H = 300, L = 40, R = 14, T = 12, B = 36;
+  const pts = a.points;
+  const tmin = Math.floor(Math.min(...pts.map((p) => p.temp)) / 5) * 5, tmax = Math.ceil(Math.max(...pts.map((p) => p.temp)) / 5) * 5;
+  const ymax = niceMax(Math.max(...pts.map((p) => p.drinks), 1));
+  const x = (t) => L + ((t - tmin) / (tmax - tmin || 1)) * (W - L - R), y = (v) => T + (H - T - B) - (v / ymax) * (H - T - B);
+  const grid = ticks(0, ymax).map((v) => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${L - 6}" y="${y(v) + 4}" class="axis" text-anchor="end">${v}</text>`).join("") +
+    ticks(tmin, tmax, 6).map((t) => `<text x="${x(t)}" y="${H - B + 18}" class="axis" text-anchor="middle">${t}${deg(a.unit)}</text>`).join("");
+  const dots = pts.map((p) => `<circle cx="${x(p.temp)}" cy="${y(p.drinks)}" r="4.5" class="${p.rain ? "dot rain" : "dot"}"
+    data-tip="${svgEsc(`<b>${p.drinks} drinks</b><br>${p.date} ${hourLabel(p.hour)}–${hourLabel(p.hour + 1)}<br>${p.temp}${deg(a.unit)}${p.rain ? " · rain" : ""}`)}"/>`).join("");
+  const band = (a.bands || []).map((b) => [x((b.from + b.to) / 2), y(b.drinks), b]);
+  const line = band.length > 1 ? `<polyline points="${band.map(([px, py]) => `${px},${py}`).join(" ")}" class="trend"/>` : "";
+  const marks = band.map(([px, py, b]) => `<circle cx="${px}" cy="${py}" r="5" class="trend-pt"
+    data-tip="${svgEsc(`<b>${b.drinks} drinks an hour</b> on average<br>${b.from}–${b.to}${deg(a.unit)} · ${b.n} hours`)}"/>`).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img">${grid}<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" class="baseline"/>
+    <text x="${W - R}" y="${H - 4}" class="axis" text-anchor="end">Temperature</text>${dots}${line}${marks}</svg>`;
+}
+
+async function loadTraffic() {
+  if (trDays === 28) { trData = null; return renderTraffic(); }
+  try {
+    const r = await fetch(`/api/traffic?days=${trDays}`);
+    trData = await r.json();
+    renderTraffic();
+  } catch (_) { /* keep what's shown */ }
+}
+
+function renderTraffic() {
+  const a = trData || S.traffic;
+  if (!a) return;
+  $$("#tr-days button").forEach((b) => b.classList.toggle("on", +b.dataset.d === trDays));
+  const u = a.unit;
+  $("#tr-source").textContent = a.source === "sample" ? "Sample weather (set the shop's location on Settings for real weather)"
+    : a.source ? `Weather for ${a.location?.name || "the shop"} from Open-Meteo · updated ${(a.fetched_at || "").replace("T", " ")}` : "";
+  const empty = !a.enough;
+  $("#tr-empty").innerHTML = empty ? `<div class="card"><p><b>Not enough data yet.</b> ${!a.source ? "Set the shop's location on <b>Settings → Weather</b> so the app can fetch hourly weather. " : ""}
+    The comparison needs at least 48 opening hours with both sales and weather; there are ${a.hours_matched} so far. Sales need their time of day (ring them up here, take orders on the board, or import till exports that include the time).</p></div>` : "";
+  ["#tr-kpis", "#tr-forecast", "#tr-scatter", "#tr-hours", "#tr-bands"].forEach((s) => ($(s).closest(".card") || $(s)).toggleAttribute("hidden", empty));
+  $("#tr-kpis").hidden = empty;
+  if (empty) return;
+
+  const t = a.tomorrow;
+  const rainTxt = "too few rainy hours to tell";
+  $("#tr-kpis").innerHTML = [
+    t ? ["Tomorrow", `~${t.drinks} drinks`, `${t.change >= 0 ? "+" : ""}${pct(t.change)} vs usual · high ${num(t.high)}${deg(u)} · busiest ${hourLabel(t.peak_hour)}`] : null,
+    [`Each +10${deg(u)}`, `${a.per_10 >= 0 ? "+" : ""}${a.per_10.toFixed(1)} drinks/hr`, "compared with the same hour on a cooler day"],
+    ["How consistent", `r = ${a.r}`, `${a.strength} link between temperature and drinks`],
+    ["Rain", a.rain?.diff == null ? "–" : `${a.rain.diff > 0 ? "+" : ""}${a.rain.diff.toFixed(1)} drinks/hr`, a.rain?.diff == null ? rainTxt : `${a.rain.rainy_hours} rainy hours in the period`],
+  ].filter(Boolean).map(([l, v, s]) => `<div class="kpi"><div class="kpi-l">${l}</div><div class="kpi-v">${esc(v)}</div><div class="kpi-s">${esc(s)}</div></div>`).join("");
+
+  const fc = a.forecast || [];
+  const tomorrowIso = addDays(todayIso(), 1);
+  $("#tr-fc-title").textContent = fc.some((f) => f.date === todayIso()) ? "Expected drinks by hour: rest of today and tomorrow" : "Expected drinks by hour: tomorrow";
+  if (fc.length) {
+    barChart($("#tr-forecast"), fc, {
+      value: (f) => f.drinks, ref: (f) => f.usual,
+      label: (f) => hourLabel(f.hour), group: (f) => (f.date === tomorrowIso ? "Tomorrow" : "Today"),
+      sub: (f) => `${Math.round(f.temp)}°${f.rain ? " ☂" : ""}`,
+      tipFor: (f) => `<b>~${num(f.drinks)} drinks</b> (usual ${num(f.usual)})<br>${f.date === tomorrowIso ? "Tomorrow" : "Today"} ${hourLabel(f.hour)}–${hourLabel(f.hour + 1)}<br>${num(f.temp)}${deg(u)}${f.rain ? " · rain forecast" : ""}`,
+      height: 250,
+    });
+  } else $("#tr-forecast").innerHTML = `<p class="hint">No forecast yet${a.source === "open-meteo" ? "" : ": set the location on Settings"}.</p>`;
+
+  scatterChart($("#tr-scatter"), a);
+  barChart($("#tr-hours"), a.by_hour, {
+    value: (h) => h.drinks, label: (h) => hourLabel(h.hour), sub: (h) => (h.temp == null ? "" : `${Math.round(h.temp)}°`),
+    tipFor: (h) => `<b>${num(h.drinks)} drinks</b> on average<br>${hourLabel(h.hour)}–${hourLabel(h.hour + 1)} · usually ${num(h.temp)}${deg(u)}<br>${h.n} days`,
+  });
+  $("#tr-bands").innerHTML = `<tr><th>Temperature</th><th class="r">Drinks per hour</th><th class="r">Hours</th><th>Compared with the coolest band</th></tr>` +
+    a.bands.map((b) => `<tr><td>${b.from}–${b.to}${deg(u)}</td><td class="r"><b>${num(b.drinks)}</b></td><td class="r">${b.n}</td>
+      <td>${b === a.bands[0] ? "–" : `${b.drinks >= a.bands[0].drinks ? "+" : ""}${pct(b.drinks / a.bands[0].drinks - 1)}`}</td></tr>`).join("");
+  $("#tr-method").textContent = `Based on ${a.hours_matched} opening hours (${hourLabel(a.open_hour)}–${hourLabel(a.close_hour + 1)}) over the last ${a.days} days, all channels. ` +
+    `Bands mix busy and quiet times of day; the "Each +10°" figure compares each hour only with the same hour on other days. r runs from 0 (no link) to 1 (always). ` +
+    `Weather is one factor among many: day of the week, events and promotions matter too.`;
+}
+$("#tr-days").addEventListener("click", (e) => { if (e.target.dataset.d) { trDays = +e.target.dataset.d; loadTraffic(); } });
+$("#tr-refresh").addEventListener("click", async () => {
+  try {
+    const first = (S.sales || [])[0]?.date?.slice(0, 10);
+    const res = await api("POST", "/api/weather/refresh", { backfill_from: addDays(todayIso(), -trDays) < first ? first : addDays(todayIso(), -trDays) });
+    toast(`Weather updated (${res.hours} hours)`);
+    loadTraffic();
+  } catch (err) { toast(err.message, true); }
+});
+
+// settings: location, unit, opening hours
+let wxPick = null;
+function renderWeatherSettings() {
+  const st = S.settings || {};
+  const loc = st.location;
+  $("#wx-current").innerHTML = loc ? `Location: <b>${esc(loc.name)}</b> (${num(loc.lat)}, ${num(loc.lon)})` : "No location set: the Weather &amp; Traffic tab is showing sample weather.";
+  const opts = (sel) => Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === sel ? "selected" : ""}>${hourLabel(h)}–${hourLabel(h + 1)}</option>`).join("");
+  if (!$("#wx-open").options.length || !$("#wx-open").closest(".card").contains(document.activeElement)) {
+    $("#wx-unit").value = st.temp_unit || "F";
+    $("#wx-open").innerHTML = opts(st.open_hour ?? 7).replace(/–\d+[ap]/g, "");
+    $("#wx-close").innerHTML = opts(st.close_hour ?? 19);
+  }
+}
+$("#wx-find").addEventListener("click", async () => {
+  try {
+    const r = await fetch(`/api/weather/places?q=${encodeURIComponent($("#wx-search").value)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    $("#wx-places").innerHTML = d.places.length ? d.places.map((p, i) => `<label class="check"><input type="radio" name="wx-place" value="${i}"> ${esc(p.name)}</label>`).join("")
+      : `<p class="hint">No places found.</p>`;
+    $("#wx-places")._places = d.places;
+  } catch (err) { toast(err.message, true); }
+});
+$("#wx-places").addEventListener("change", (e) => { wxPick = $("#wx-places")._places[+e.target.value]; });
+$("#wx-save").addEventListener("click", async () => {
+  const body = { temp_unit: $("#wx-unit").value, open_hour: +$("#wx-open").value, close_hour: +$("#wx-close").value };
+  if (wxPick) body.location = wxPick;
+  try {
+    const res = await api("PUT", "/api/weather/settings", body);
+    if (res.weather_error) toast(`Saved, but the weather couldn't be fetched: ${res.weather_error}`, true);
+    else toast(wxPick ? "Saved — weather fetched for the new location" : "Saved");
+    wxPick = null; $("#wx-places").innerHTML = "";
+    trData = null; loadTraffic();
+  } catch (err) { toast(err.message, true); }
+});
 
 // ---------------------------------------------------------------- settings
 function renderSettings() {

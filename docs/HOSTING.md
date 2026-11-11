@@ -101,3 +101,13 @@ With Docker: `docker compose -f deploy/docker-compose.yml exec app python -m app
 
 Five wrong passwords for an account lock further tries from that address for five minutes. Sessions last
 12 hours from the last activity; restarting the app signs everyone out.
+
+## Time zone and weather
+
+Sale times, the schedule and the hourly weather are all matched by local time, so the server must run in the
+shop's time zone. A computer in the shop already does. In Docker, set `TZ` to the shop's zone (for example
+`America/Chicago`) in `deploy/docker-compose.yml`, or per shop in `deploy/multi/docker-compose.yml`.
+
+For the Weather & Traffic tab, the server needs to reach `api.open-meteo.com` and `archive-api.open-meteo.com`
+(and `geocoding-api.open-meteo.com` to look up the location). Open-Meteo is free for non-commercial use; a business
+using it commercially should check Open-Meteo's terms and take its paid plan if they apply.

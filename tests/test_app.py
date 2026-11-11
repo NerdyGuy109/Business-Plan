@@ -18,7 +18,7 @@ from http.cookiejar import CookieJar
 TMP = tempfile.mkdtemp(prefix="menu-inventory-tests-")
 os.environ["MENU_DATA_DIR"] = TMP  # must be set before the app modules are imported
 
-from app import auth, orders, pos_import, seed  # noqa: E402
+from app import auth, orders, pos_import, seed, weather  # noqa: E402
 from app.excel import export_workbook, import_workbook  # noqa: E402
 from app.store import Store, ValidationError, shift_hours  # noqa: E402
 
@@ -252,6 +252,55 @@ class OrderTests(unittest.TestCase):
         o = self.new(); orders.set_status(self.s, o["id"], "preparing")
         row = next(r for r in orders.channel_report(self.s, o["placed_at"][:10]) if r["channel"] == "doordash")
         self.assertAlmostEqual(row["net"], row["gross"] - row["commission"] - row["fees"], places=2)
+
+
+class WeatherTests(unittest.TestCase):
+    def setUp(self):
+        self.s = fresh_store()  # sample weather; sales rise with temperature and dip in the rain
+
+    def test_sample_shows_warm_hours_busier(self):
+        a = weather.analysis(self.s)
+        self.assertTrue(a["enough"])
+        self.assertGreater(a["per_10"], 0)
+        self.assertGreater(a["r"], 0.2)
+        self.assertLess(a["rain"]["diff"], 0)
+        self.assertEqual([b["hour"] for b in a["by_hour"]], list(range(7, 20)))
+        self.assertTrue(a["forecast"] and a["tomorrow"]["drinks"] > 0)
+
+    def test_hourly_traffic_counts_drinks_and_fills_empty_hours(self):
+        rows = weather.hourly_traffic(self.s, days=3)
+        day = rows[0]["date"]
+        sold = sum(x["qty"] for x in self.s.data["sales"] if x["date"].startswith(day + "T07"))
+        self.assertEqual(next(r for r in rows if r["date"] == day and r["hour"] == 7)["drinks"], sold)
+        self.assertEqual(len([r for r in rows if r["date"] == day]), 13)  # every opening hour, sold or not
+
+    def test_slope_is_per_display_degree(self):
+        f = weather.analysis(self.s)["per_10"]
+        weather.update_settings(self.s, {"temp_unit": "C"})
+        c = weather.analysis(self.s)["per_10"]
+        self.assertAlmostEqual(c, f * 9 / 5, delta=0.05)
+
+    def test_fetch_stores_hours_and_replaces_sample(self):
+        calls = []
+
+        def fake(url, params, timeout=20):
+            calls.append((url, params))
+            return {"hourly": {"time": ["2026-01-05T09:00", "2026-01-05T10:00"], "temperature_2m": [10.5, None],
+                               "precipitation": [0.0, 1.0]}}
+        weather.update_settings(self.s, {"location": {"name": "Testville", "lat": 30.2, "lon": -97.7, "timezone": "America/Chicago"}})
+        original, weather._get = weather._get, fake
+        try:
+            self.assertEqual(weather.refresh(self.s), 1)  # the hour with no temperature is skipped
+        finally:
+            weather._get = original
+        self.assertEqual(self.s.data["weather"]["source"], "open-meteo")
+        self.assertEqual(self.s.data["weather"]["hours"], {"2026-01-05T09": {"t": 10.5, "p": 0.0}})
+        self.assertEqual(calls[0][1]["timezone"], "America/Chicago")
+
+    def test_bad_settings_refused(self):
+        for bad in ({"location": {"lat": 200, "lon": 0}}, {"temp_unit": "K"}, {"open_hour": 20, "close_hour": 8}):
+            with self.assertRaises(ValidationError):
+                weather.update_settings(self.s, bad)
 
 
 class ScheduleTests(unittest.TestCase):
